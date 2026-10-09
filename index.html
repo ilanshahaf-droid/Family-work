@@ -1,0 +1,866 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>מטלות הבית</title>
+<meta name="theme-color" content="#5b4bdb">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="מטלות הבית">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#f5f3ff; --card:#ffffff; --ink:#1e1a3c; --muted:#6c6890; --line:#e6e2f7;
+  --primary:#5b4bdb; --primary-ink:#ffffff; --primary-soft:#ece9ff;
+  --gold:#f5a50b; --gold-soft:#fff4dc;
+  --ok:#17a26b; --ok-soft:#e1f6ec; --bad:#e0454b; --bad-soft:#fde7e8; --warn:#d98a00; --warn-soft:#fff3d6;
+  --shadow:0 2px 0 rgba(30,26,60,.04), 0 8px 24px rgba(91,75,219,.08);
+  --r:18px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Rubik',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+body{min-height:100vh;padding-bottom:calc(86px + env(safe-area-inset-bottom))}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3,h4{margin:0;line-height:1.25}
+p{margin:.25rem 0}
+.muted{color:var(--muted)} .small{font-size:.85rem}
+.shell{max-width:780px;margin:0 auto;padding:16px}
+.stack>*+*{margin-top:14px}
+.row{display:flex;align-items:center;gap:10px}
+.row-between{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.row-end{display:flex;justify-content:flex-end;gap:10px;margin-top:16px;flex-wrap:wrap}
+.grid{display:grid;gap:12px}
+@media(min-width:620px){.grid.two{grid-template-columns:1fr 1fr}.grid.three{grid-template-columns:repeat(3,1fr)}}
+.grid.stats{grid-template-columns:repeat(3,1fr)}
+
+/* top bar */
+.topbar{position:sticky;top:0;z-index:20;background:rgba(245,243,255,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.topbar .in{max-width:780px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:40px;height:40px;border-radius:12px;background:var(--primary);display:grid;place-items:center;font-size:22px}
+.brand-t{font-weight:800;font-size:1.05rem}
+.brand-s{font-size:.8rem;color:var(--muted)}
+.icon-btn{border:0;background:transparent;width:38px;height:38px;border-radius:12px;font-size:20px;cursor:pointer;color:var(--muted)}
+.icon-btn:hover{background:var(--primary-soft)}
+.avatar{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-size:20px;background:color-mix(in srgb,var(--c,#5b4bdb) 18%,white);border:2px solid var(--c,#5b4bdb);flex:none}
+.avatar.lg{width:56px;height:56px;font-size:30px}
+button.avatar{cursor:pointer;padding:0}
+
+/* cards */
+.card{background:var(--card);border-radius:var(--r);padding:16px;box-shadow:var(--shadow);border:1px solid var(--line)}
+.card h3{font-size:1.1rem}
+.section-t{font-weight:700;font-size:1rem;margin:22px 2px 10px;display:flex;align-items:center;justify-content:space-between}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-size:.78rem;font-weight:600;background:var(--primary-soft);color:var(--primary);white-space:nowrap}
+.chip.gold{background:var(--gold-soft);color:#a86b00}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+.chip.bad{background:var(--bad-soft);color:var(--bad)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.chip.gray{background:#f0eff5;color:var(--muted)}
+.credit{font-weight:800;color:#a86b00;white-space:nowrap}
+
+/* buttons */
+.btn{border:0;border-radius:14px;padding:11px 18px;background:var(--primary);color:var(--primary-ink);font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:transform .08s,opacity .15s}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.ghost{background:var(--primary-soft);color:var(--primary)}
+.btn.ok{background:var(--ok)} .btn.danger{background:var(--bad)}
+.btn.soft-bad{background:var(--bad-soft);color:var(--bad)}
+.btn.sm{padding:7px 12px;font-size:.88rem;border-radius:11px}
+.btn.big{padding:15px 22px;font-size:1.05rem;width:100%}
+.btn.block{width:100%}
+
+/* hero balance */
+.hero{background:linear-gradient(135deg,#5b4bdb,#8b5cf6);color:#fff;border:0}
+.hero .muted{color:rgba(255,255,255,.8)}
+.hero-num{font-size:2.6rem;font-weight:800;line-height:1}
+.hero-row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+.hero-pill{background:rgba(255,255,255,.16);border-radius:12px;padding:8px 12px;font-size:.88rem}
+.hero-pill b{font-size:1.05rem}
+
+/* weekly chore */
+.week{border:2px solid var(--primary-soft)}
+.week.empty{text-align:center;padding:26px 16px}
+.week-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.week-main{display:flex;gap:14px;align-items:center}
+.big-emoji{font-size:44px;line-height:1;width:64px;height:64px;display:grid;place-items:center;background:var(--primary-soft);border-radius:18px;flex:none}
+.week.empty .big-emoji{margin:0 auto 10px}
+.dots{display:flex;gap:8px;margin:16px 0 14px;flex-wrap:wrap}
+.dot{width:34px;height:34px;border-radius:50%;border:2px dashed #cfc9ee;display:grid;place-items:center;font-size:15px}
+.dot.ok{background:var(--ok);border:0;color:#fff}
+.dot.wait{background:var(--gold-soft);border:2px solid var(--gold)}
+.done-msg{background:var(--ok-soft);color:var(--ok);padding:12px;border-radius:14px;text-align:center;font-weight:700}
+.week-foot{display:flex;flex-direction:column;gap:6px;align-items:center}
+
+/* lists */
+.list{display:flex;flex-direction:column;gap:10px}
+.item{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px}
+.item .em{font-size:26px;width:46px;height:46px;border-radius:14px;background:var(--primary-soft);display:grid;place-items:center;flex:none}
+.item .body{flex:1;min-width:0}
+.item .title{font-weight:700}
+.item .sub{font-size:.84rem;color:var(--muted);margin-top:2px}
+.item.mine{border:2px solid var(--primary);background:#faf9ff}
+.item.disabled{opacity:.6}
+.item .side{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+
+/* rewards */
+.rewards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+@media(min-width:620px){.rewards{grid-template-columns:repeat(3,1fr)}}
+.reward{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;text-align:center;display:flex;flex-direction:column;gap:6px;box-shadow:var(--shadow)}
+.reward .em{font-size:40px}
+.reward .title{font-weight:700;min-height:2.5em;display:grid;place-items:center}
+.reward .cost{font-weight:800;color:#a86b00}
+.banner{border-radius:16px;padding:14px;display:flex;gap:12px;align-items:center;font-weight:600}
+.banner.closed{background:var(--warn-soft);color:#8a5a00}
+.banner.open{background:var(--ok-soft);color:var(--ok)}
+.banner .ic{font-size:26px}
+
+/* leaderboard */
+.lb-row{display:flex;align-items:center;gap:10px;padding:8px 0}
+.lb-row+.lb-row{border-top:1px solid var(--line)}
+.lb-pos{width:24px;text-align:center;font-weight:800;color:var(--muted)}
+.lb-bar{flex:1;height:10px;background:var(--primary-soft);border-radius:99px;overflow:hidden}
+.lb-bar span{display:block;height:100%;background:var(--primary);border-radius:99px}
+.lb-me{font-weight:800}
+
+/* stats */
+.stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;text-align:center}
+.stat b{display:block;font-size:1.6rem;font-weight:800}
+.stat span{font-size:.8rem;color:var(--muted)}
+.stat.alert{background:var(--warn-soft);border-color:#f3d9a0}
+
+/* kid cards (admin) */
+.kidcard .head{display:flex;gap:12px;align-items:center}
+.kidcard .nums{display:flex;gap:16px;margin-top:12px;flex-wrap:wrap}
+.kidcard .nums div{font-size:.82rem;color:var(--muted)}
+.kidcard .nums b{display:block;font-size:1.2rem;color:var(--ink)}
+.kidweek{margin-top:12px;padding:10px 12px;border-radius:12px;background:var(--bg);font-size:.9rem}
+.kidweek.none{background:var(--warn-soft);color:#8a5a00}
+
+/* approval */
+.appr{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px}
+.appr .top{display:flex;gap:10px;align-items:center}
+.appr .note{margin:10px 0 0;background:var(--bg);border-radius:10px;padding:8px 10px;font-size:.9rem}
+.appr .acts{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.mini{width:72px;padding:7px 8px;border:1px solid var(--line);border-radius:10px;text-align:center}
+
+/* nav */
+.nav{position:fixed;bottom:0;inset-inline:0;z-index:30;background:#fff;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.nav .in{max-width:780px;margin:0 auto;display:flex}
+.nav button{flex:1;border:0;background:none;padding:9px 2px 10px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.72rem;color:var(--muted);cursor:pointer;position:relative}
+.nav button .ic{font-size:21px;filter:grayscale(1);opacity:.65}
+.nav button.on{color:var(--primary);font-weight:700}
+.nav button.on .ic{filter:none;opacity:1}
+.badge{position:absolute;top:4px;inset-inline-start:calc(50% + 6px);background:var(--bad);color:#fff;font-size:.68rem;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:grid;place-items:center;padding:0 5px}
+
+/* forms */
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.field label{font-weight:600;font-size:.9rem}
+.field .hint{font-size:.78rem;color:var(--muted)}
+.input{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;background:#fff;outline:none}
+.input:focus{border-color:var(--primary)}
+textarea.input{min-height:80px;resize:vertical}
+.check{display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer}
+.check input{width:20px;height:20px;accent-color:var(--primary)}
+.emoji-row{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.emo{border:1px solid var(--line);background:#fff;border-radius:10px;width:38px;height:38px;font-size:20px;cursor:pointer}
+.emo.on{border:2px solid var(--primary);background:var(--primary-soft)}
+.colors{display:flex;gap:8px;flex-wrap:wrap}
+.colors button{width:32px;height:32px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer}
+.colors button.on{box-shadow:0 0 0 3px var(--ink)}
+.seg{display:flex;background:var(--primary-soft);border-radius:14px;padding:4px;gap:4px}
+.seg button{flex:1;border:0;background:none;padding:9px;border-radius:10px;font-weight:600;color:var(--primary);cursor:pointer}
+.seg button.on{background:#fff;box-shadow:var(--shadow)}
+
+/* auth */
+.auth{min-height:100vh;display:grid;place-items:center;padding:20px}
+.auth .card{width:100%;max-width:400px;padding:26px}
+.auth .logo{width:64px;height:64px;font-size:34px;border-radius:20px;margin:0 auto 12px}
+.auth h1{text-align:center;font-size:1.5rem}
+.auth .sub{text-align:center;color:var(--muted);margin-bottom:20px}
+.err{background:var(--bad-soft);color:var(--bad);padding:10px 12px;border-radius:12px;font-size:.9rem;margin-bottom:12px}
+.info{background:var(--primary-soft);color:var(--primary);padding:10px 12px;border-radius:12px;font-size:.9rem;margin-bottom:12px}
+
+/* modal */
+#modal-root .overlay{position:fixed;inset:0;background:rgba(30,26,60,.45);z-index:50;display:flex;align-items:flex-end;justify-content:center;animation:fade .15s}
+@media(min-width:620px){#modal-root .overlay{align-items:center}}
+.modal{background:#fff;width:100%;max-width:520px;max-height:92vh;overflow:auto;border-radius:22px 22px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));animation:up .2s}
+@media(min-width:620px){.modal{border-radius:22px}}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.modal-head h3{font-size:1.15rem}
+@keyframes fade{from{opacity:0}} @keyframes up{from{transform:translateY(30px);opacity:.5}}
+
+#toast{position:fixed;bottom:calc(96px + env(safe-area-inset-bottom));left:50%;transform:translate(-50%,20px);background:var(--ink);color:#fff;padding:11px 18px;border-radius:14px;font-weight:600;opacity:0;pointer-events:none;transition:.2s;z-index:60;max-width:90vw;text-align:center}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+#toast.ok{background:var(--ok)} #toast.bad{background:var(--bad)}
+.empty-state{text-align:center;padding:26px 10px;color:var(--muted)}
+.empty-state .e{font-size:38px;margin-bottom:6px}
+.loading{min-height:70vh;display:grid;place-items:center;color:var(--muted)}
+.spin{width:34px;height:34px;border:4px solid var(--primary-soft);border-top-color:var(--primary);border-radius:50%;animation:sp 0.8s linear infinite;margin:0 auto 10px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.tabs-sub{display:flex;gap:8px;margin-bottom:12px;overflow-x:auto}
+.tabs-sub button{border:0;background:#fff;border:1px solid var(--line);padding:8px 14px;border-radius:999px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap}
+.tabs-sub button.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.month-row{display:flex;justify-content:space-between;padding:9px 0;border-top:1px solid var(--line);font-size:.92rem}
+.month-row:first-child{border-top:0}
+</style>
+</head>
+<body>
+<div id="app"><div class="loading"><div><div class="spin"></div>טוען…</div></div></div>
+<div id="modal-root"></div>
+<div id="toast"></div>
+
+<script>
+/* =====================================================================
+   הגדרות — להחליף בפרטי פרויקט ה-Supabase (Settings → API)
+   ===================================================================== */
+const CONFIG = {
+  SUPABASE_URL: 'https://YOUR-PROJECT.supabase.co',
+  SUPABASE_ANON_KEY: 'YOUR-ANON-KEY',
+  EMAIL_DOMAIN: 'matalot-bait.app'   // שם המשתמש הופך לכתובת פנימית: username@EMAIL_DOMAIN
+};
+
+/* ---------------- כלים ---------------- */
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const toEmail = u => `${u.trim().toLowerCase()}@${CONFIG.EMAIL_DOMAIN}`;
+const USER_RE = /^[a-z0-9._-]{3,20}$/;
+const HE_MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+const CHORE_EMOJIS = ['🧹','🍽️','🗑️','🛏️','👕','🧺','🪴','🐶','🐱','🚗','🧽','🕯️','🛒','🍳','🪟','🚿','📚','🧸','🌳','🧼'];
+const REWARD_EMOJIS = ['🎁','📱','🎮','🎬','🍕','🍦','🍫','🌙','💰','🎨','⚽','🎟️','🛍️','🏊','🎂','🧁','📖','🎧','🚲','⭐'];
+const AVATARS = ['🦊','🐼','🦁','🐸','🐯','🐨','🦄','🐙','🐵','🐰','🐧','🦖','🐳','🦋','🌟','🚀'];
+const COLORS = ['#5b4bdb','#e0454b','#17a26b','#f5a50b','#0ea5e9','#ec4899','#8b5cf6','#14b8a6'];
+
+function ilDate(d = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', {timeZone:'Asia/Jerusalem', year:'numeric', month:'2-digit', day:'2-digit'}).format(d);
+}
+function addDays(iso, n) { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0,10); }
+function weekStart(d = new Date()) { const s = ilDate(d); const dt = new Date(s + 'T00:00:00Z'); return addDays(s, -dt.getUTCDay()); }
+function monthKey(d = new Date()) { return ilDate(d).slice(0,7); }
+function monthName(mk) { const [y,m] = mk.split('-').map(Number); return `${HE_MONTHS[m-1]} ${y}`; }
+function fmtWeek(ws) { const f = iso => { const [,m,d] = iso.split('-').map(Number); return `${d}.${m}`; }; return `${f(ws)}–${f(addDays(ws,6))}`; }
+function fmtDate(iso) { return new Intl.DateTimeFormat('he-IL', {timeZone:'Asia/Jerusalem', day:'numeric', month:'numeric', hour:'2-digit', minute:'2-digit'}).format(new Date(iso)); }
+function prevMonths(n) { const out = []; let [y,m] = monthKey().split('-').map(Number); for (let i=0;i<n;i++){ out.push(`${y}-${String(m).padStart(2,'0')}`); m--; if(!m){m=12;y--;} } return out; }
+
+function toast(msg, type = '') { const t = $('#toast'); t.textContent = msg; t.className = 'show ' + type; clearTimeout(t._t); t._t = setTimeout(() => t.className = '', 2800); }
+function errMsg(e) {
+  const m = e?.message || String(e);
+  if (/Invalid login/i.test(m)) return 'שם משתמש או סיסמה שגויים';
+  if (/already registered|already exists|duplicate key.*username/i.test(m)) return 'שם המשתמש כבר תפוס';
+  if (/Password should be/i.test(m)) return 'הסיסמה צריכה להכיל לפחות 6 תווים';
+  if (/Email not confirmed/i.test(m)) return 'החשבון ממתין לאימות מייל — יש לכבות Confirm email ב-Supabase';
+  if (/Failed to fetch|NetworkError/i.test(m)) return 'אין חיבור לשרת';
+  if (/email.*invalid/i.test(m)) return 'Supabase דחה את הכתובת הפנימית — נסו לשנות את EMAIL_DOMAIN';
+  return m;
+}
+function must(res) { if (res.error) throw res.error; return res.data; }
+
+/* ---------------- מצב ---------------- */
+let sb, liveChan, liveTimer;
+const S = { me:null, settings:{store_mode:'auto', store_days:3, family_name:'מטלות הבית'}, profiles:[], chores:[], selections:[], reports:[], rewards:[], redemptions:[], balances:{}, tab:null, sub:{} };
+
+const kids = (all = false) => S.profiles.filter(p => p.role === 'kid' && (all || p.active));
+const prof = id => S.profiles.find(p => p.id === id);
+const chore = id => S.chores.find(c => c.id === id);
+const balanceOf = id => S.balances[id] || 0;
+const curSel = (kid, ws = weekStart()) => S.selections.find(s => s.kid_id === kid && s.week_start === ws);
+const selReps = sel => S.reports.filter(r => r.selection_id === sel.id && r.status !== 'rejected').sort((a,b) => a.created_at.localeCompare(b.created_at));
+const monthEarned = (kid, mk = monthKey()) => S.reports.filter(r => r.kid_id === kid && r.status === 'approved' && monthKey(new Date(r.created_at)) === mk).reduce((a,r) => a + r.credits, 0);
+const monthSpent = (kid, mk = monthKey()) => S.redemptions.filter(r => r.kid_id === kid && r.status !== 'rejected' && monthKey(new Date(r.created_at)) === mk).reduce((a,r) => a + r.cost, 0);
+const pendingReports = () => S.reports.filter(r => r.status === 'pending');
+const pendingRedemptions = () => S.redemptions.filter(r => r.status === 'pending');
+const choresFor = kid => S.chores.filter(c => c.active && (!c.assigned_to || !c.assigned_to.length || c.assigned_to.includes(kid)));
+
+function storeInfo() {
+  const s = S.settings;
+  if (s.store_mode === 'open') return {open:true, text:'החנות פתוחה'};
+  if (s.store_mode === 'closed') return {open:false, text:'החנות סגורה כרגע'};
+  const [y,m,d] = ilDate().split('-').map(Number);
+  const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const openFrom = last - s.store_days + 1;
+  if (d >= openFrom) return {open:true, text:`החנות פתוחה עד סוף ${HE_MONTHS[m-1]}`};
+  const days = openFrom - d;
+  return {open:false, days, text: days === 1 ? 'החנות נפתחת מחר!' : `החנות נפתחת בעוד ${days} ימים (${openFrom}.${m})`};
+}
+
+/* ---------------- טעינה ---------------- */
+async function refresh(silent) {
+  try {
+    const since = addDays(weekStart(), -7*26);
+    const [st, pr, ch, se, re, rw, rd, bl] = await Promise.all([
+      sb.from('ch_settings').select('*').eq('id',1).maybeSingle(),
+      sb.from('ch_profiles').select('*').order('created_at'),
+      sb.from('ch_chores').select('*').order('sort').order('created_at'),
+      sb.from('ch_selections').select('*').gte('week_start', since),
+      sb.from('ch_reports').select('*').order('created_at', {ascending:false}).limit(1000),
+      sb.from('ch_rewards').select('*').order('cost'),
+      sb.from('ch_redemptions').select('*').order('created_at', {ascending:false}).limit(500),
+      sb.rpc('ch_balances'),
+    ]);
+    if (st.data) S.settings = st.data;
+    S.profiles = must(pr); S.chores = must(ch); S.selections = must(se);
+    S.reports = must(re); S.rewards = must(rw); S.redemptions = must(rd);
+    S.balances = Object.fromEntries((must(bl) || []).map(b => [b.kid_id, b.balance]));
+    const me = S.profiles.find(p => p.id === S.me.id); if (me) S.me = me;
+    render();
+  } catch (e) { console.error(e); if (!silent) toast(errMsg(e), 'bad'); }
+}
+async function run(fn, okMsg) {
+  try { await fn(); if (okMsg) toast(okMsg, 'ok'); await refresh(); return true; }
+  catch (e) { console.error(e); toast(errMsg(e), 'bad'); return false; }
+}
+function subscribeLive() {
+  if (liveChan) sb.removeChannel(liveChan);
+  const kick = () => { clearTimeout(liveTimer); liveTimer = setTimeout(() => refresh(true), 600); };
+  liveChan = sb.channel('ch-live');
+  ['ch_reports','ch_redemptions','ch_selections'].forEach(t => liveChan.on('postgres_changes', {event:'*', schema:'public', table:t}, kick));
+  liveChan.subscribe();
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden && S.me) refresh(true); });
+
+/* ---------------- כניסה ---------------- */
+async function boot() {
+  if (CONFIG.SUPABASE_URL.includes('YOUR-')) {
+    $('#app').innerHTML = `<div class="auth"><div class="card"><div class="logo">🏠</div><h1>כמעט מוכן</h1><p class="sub">צריך להזין בקובץ index.html את כתובת ה-Supabase ואת ה-anon key (בראש הסקריפט, באובייקט CONFIG).</p></div></div>`;
+    return;
+  }
+  sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {auth:{storageKey:'matalot-auth'}});
+  const { data:{ session } } = await sb.auth.getSession();
+  if (session) return enter();
+  showAuth();
+}
+
+async function showAuth(error) {
+  const { data:hasAdmin, error:e } = await sb.rpc('ch_has_admin');
+  if (e) {
+    $('#app').innerHTML = `<div class="auth"><div class="card"><div class="logo">⚠️</div><h1>אין חיבור למסד הנתונים</h1><p class="sub">${esc(errMsg(e))}<br>ודאו שהרצתם את schema.sql בפרויקט.</p><button class="btn block" onclick="location.reload()">נסו שוב</button></div></div>`;
+    return;
+  }
+  hasAdmin ? renderLogin(error) : renderSetup(error);
+}
+
+function renderLogin(error) {
+  $('#app').innerHTML = `<div class="auth"><form class="card" id="loginF">
+    <div class="logo">🏠</div><h1>מטלות הבית</h1><p class="sub">כניסה עם שם משתמש וסיסמה</p>
+    ${error ? `<div class="err">${esc(error)}</div>` : ''}
+    <div class="field"><label>שם משתמש</label><input class="input" name="u" autocomplete="username" autocapitalize="none" dir="ltr" required></div>
+    <div class="field"><label>סיסמה</label><input class="input" name="p" type="password" autocomplete="current-password" dir="ltr" required></div>
+    <button class="btn big" type="submit">כניסה</button></form></div>`;
+  $('#loginF').onsubmit = async ev => {
+    ev.preventDefault(); const f = ev.target; const b = f.querySelector('button'); b.disabled = true;
+    const { error } = await sb.auth.signInWithPassword({ email: toEmail(f.u.value), password: f.p.value });
+    if (error) { b.disabled = false; return renderLogin(errMsg(error)); }
+    enter();
+  };
+}
+
+function renderSetup(error) {
+  $('#app').innerHTML = `<div class="auth"><form class="card" id="setupF">
+    <div class="logo">👑</div><h1>הגדרה ראשונה</h1><p class="sub">יצירת חשבון המנהל (ההורה)</p>
+    ${error ? `<div class="err">${esc(error)}</div>` : ''}
+    <div class="field"><label>השם שלך</label><input class="input" name="n" required placeholder="אבא"></div>
+    <div class="field"><label>שם משתמש</label><input class="input" name="u" dir="ltr" autocapitalize="none" required><span class="hint">אותיות באנגלית, ספרות, נקודה או מקף (3–20)</span></div>
+    <div class="field"><label>סיסמה</label><input class="input" name="p" type="password" dir="ltr" minlength="6" required></div>
+    <button class="btn big" type="submit">יצירת מנהל</button></form></div>`;
+  $('#setupF').onsubmit = async ev => {
+    ev.preventDefault(); const f = ev.target; const u = f.u.value.trim().toLowerCase();
+    if (!USER_RE.test(u)) return renderSetup('שם המשתמש צריך להיות באנגלית, 3–20 תווים');
+    f.querySelector('button').disabled = true;
+    let { data, error } = await sb.auth.signUp({ email: toEmail(u), password: f.p.value });
+    if (error && /already registered/i.test(error.message)) ({ data, error } = await sb.auth.signInWithPassword({ email: toEmail(u), password: f.p.value }));
+    if (error) return renderSetup(errMsg(error));
+    if (!data.session) return renderSetup('החשבון נוצר אבל ממתין לאימות מייל. כבו את "Confirm email" ב-Supabase (Authentication → Sign In / Providers → Email) ונסו שוב.');
+    const r = await sb.rpc('ch_bootstrap_admin', { p_username: u, p_display: f.n.value.trim() });
+    if (r.error) return renderSetup(errMsg(r.error));
+    enter();
+  };
+}
+
+async function enter() {
+  const { data:{ user } } = await sb.auth.getUser();
+  if (!user) return showAuth();
+  const { data:p } = await sb.from('ch_profiles').select('*').eq('id', user.id).maybeSingle();
+  if (!p || !p.active) {
+    $('#app').innerHTML = `<div class="auth"><div class="card"><div class="logo">🔒</div><h1>אין גישה</h1><p class="sub">${p ? 'החשבון הושבת ע״י המנהל.' : 'החשבון הזה לא רשום באפליקציה.'}</p><button class="btn block" onclick="logout()">יציאה</button></div></div>`;
+    return;
+  }
+  S.me = p; S.tab = p.role === 'admin' ? 'overview' : 'home';
+  await refresh(); subscribeLive();
+}
+async function logout() { if (liveChan) sb.removeChannel(liveChan); await sb.auth.signOut(); S.me = null; closeModal(); showAuth(); }
+
+/* ---------------- מודאל ---------------- */
+function openModal(title, body) {
+  const root = $('#modal-root');
+  root.innerHTML = `<div class="overlay" data-act="bg"><div class="modal" role="dialog"><div class="modal-head"><h3>${esc(title)}</h3><button class="icon-btn" data-act="closeModal" aria-label="סגירה">✕</button></div><div class="modal-body">${body}</div></div></div>`;
+  return root.querySelector('.modal');
+}
+function closeModal() { $('#modal-root').innerHTML = ''; }
+function confirmBox(title, text, okLabel = 'אישור', cls = '') {
+  return new Promise(res => {
+    const m = openModal(title, `<p class="muted">${text}</p><div class="row-end"><button class="btn ghost" id="cNo">ביטול</button><button class="btn ${cls}" id="cYes">${okLabel}</button></div>`);
+    m.querySelector('#cNo').onclick = () => { closeModal(); res(false); };
+    m.querySelector('#cYes').onclick = () => { closeModal(); res(true); };
+  });
+}
+function emojiPicker(name, value, list) {
+  return `<input class="input" name="${name}" value="${esc(value)}" maxlength="8" style="width:90px;text-align:center;font-size:1.4rem">
+    <div class="emoji-row" data-for="${name}">${list.map(e => `<button type="button" class="emo ${e===value?'on':''}" data-emo="${e}">${e}</button>`).join('')}</div>`;
+}
+function wirePickers(m) {
+  m.querySelectorAll('.emoji-row').forEach(row => row.addEventListener('click', e => {
+    const b = e.target.closest('.emo'); if (!b) return;
+    m.querySelector(`[name="${row.dataset.for}"]`).value = b.dataset.emo;
+    row.querySelectorAll('.emo').forEach(x => x.classList.toggle('on', x === b));
+  }));
+  m.querySelectorAll('.colors').forEach(row => row.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    m.querySelector(`[name="${row.dataset.for}"]`).value = b.dataset.c;
+    row.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  }));
+}
+
+/* ---------------- מסגרת ---------------- */
+const KID_TABS = [['home','🏠','הבית שלי'],['chores','📋','מטלות'],['store','🛍️','חנות'],['history','📈','היסטוריה']];
+const ADMIN_TABS = [['overview','📊','סקירה'],['approvals','✅','אישורים'],['chores','📋','מטלות'],['store','🛍️','חנות'],['kids','👧','ילדים'],['settings','⚙️','הגדרות']];
+
+function render() {
+  if (!S.me) return;
+  const admin = S.me.role === 'admin';
+  const views = admin ? ADMIN_VIEWS : KID_VIEWS;
+  const tabs = admin ? ADMIN_TABS : KID_TABS;
+  const pend = pendingReports().length + pendingRedemptions().length;
+  $('#app').innerHTML = `
+    <header class="topbar"><div class="in">
+      <div class="brand"><div class="logo">🏠</div><div><div class="brand-t">${esc(S.settings.family_name || 'מטלות הבית')}</div><div class="brand-s">${admin ? 'לוח מנהל' : 'הדף של ' + esc(S.me.display_name)}</div></div></div>
+      <div class="row"><button class="icon-btn" data-act="refresh" title="רענון">↻</button><button class="avatar" style="--c:${S.me.color}" data-act="account">${esc(S.me.avatar)}</button></div>
+    </div></header>
+    <main class="shell">${views[S.tab]()}</main>
+    <nav class="nav"><div class="in">${tabs.map(([k,ic,l]) => `<button class="${S.tab===k?'on':''}" data-act="tab" data-tab="${k}"><span class="ic">${ic}</span>${l}${admin && k==='approvals' && pend ? `<span class="badge">${pend}</span>` : ''}</button>`).join('')}</div></nav>`;
+}
+
+const statusChip = s => s === 'approved' ? '<span class="chip ok">אושר ✓</span>' : s === 'rejected' ? '<span class="chip bad">נדחה</span>' : '<span class="chip warn">ממתין ⏳</span>';
+const empty = (e, t) => `<div class="empty-state"><div class="e">${e}</div>${t}</div>`;
+
+/* =====================================================================
+   מסכי ילד
+   ===================================================================== */
+function weeklyCard(kidId, interactive) {
+  const ws = weekStart(), sel = curSel(kidId), c = sel && chore(sel.chore_id);
+  if (!sel || !c) {
+    return `<div class="card week empty"><div class="big-emoji">🤔</div><h3>עוד לא נבחרה מטלה לשבוע</h3><p class="muted">שבוע ${fmtWeek(ws)} · בחרו מטלה מהרשימה והתחילו לצבור קרדיטים</p>${interactive ? `<div style="margin-top:14px"><button class="btn" data-act="tab" data-tab="chores">לבחירת מטלה</button></div>` : ''}</div>`;
+  }
+  const reps = selReps(sel), left = c.times_per_week - reps.length;
+  const dots = Array.from({length:c.times_per_week}, (_, i) => { const r = reps[i]; return `<span class="dot ${!r ? '' : r.status === 'approved' ? 'ok' : 'wait'}">${!r ? '' : r.status === 'approved' ? '✓' : '⏳'}</span>`; }).join('');
+  return `<div class="card week">
+    <div class="week-top"><span class="chip">המטלה השבועית · ${fmtWeek(ws)}</span><span class="credit">⭐ ${c.credits}${c.times_per_week > 1 ? ' לכל ביצוע' : ''}</span></div>
+    <div class="week-main"><div class="big-emoji">${esc(c.emoji)}</div><div><h3>${esc(c.title)}</h3>${c.description ? `<p class="muted small">${esc(c.description)}</p>` : ''}</div></div>
+    <div class="dots">${dots}</div>
+    ${interactive ? `<div class="week-foot">${left > 0
+      ? `<button class="btn big" data-act="report">✋ ביצעתי! שליחה לאישור</button><span class="muted small">${left === 1 ? 'נשאר עוד דיווח אחד' : `נשארו ${left} דיווחים`} השבוע</span>`
+      : `<div class="done-msg" style="width:100%">🎉 השלמת את כל הביצועים לשבוע הזה!</div>`}</div>` : ''}
+  </div>`;
+}
+
+function leaderboard(meId) {
+  const ks = kids(); if (ks.length < 2) return '';
+  const rows = ks.map(k => ({k, v:monthEarned(k.id)})).sort((a,b) => b.v - a.v);
+  const max = Math.max(1, ...rows.map(r => r.v));
+  return `<div class="section-t">🏆 הלוח המשפחתי · ${HE_MONTHS[+monthKey().slice(5)-1]}</div>
+    <div class="card">${rows.map((r,i) => `<div class="lb-row ${r.k.id===meId?'lb-me':''}"><span class="lb-pos">${i+1}</span><span class="avatar" style="--c:${r.k.color};width:32px;height:32px;font-size:17px">${esc(r.k.avatar)}</span><span style="min-width:64px">${esc(r.k.display_name)}</span><div class="lb-bar"><span style="width:${Math.round(r.v/max*100)}%"></span></div><span class="credit">⭐ ${r.v}</span></div>`).join('')}</div>`;
+}
+
+function kidHome() {
+  const me = S.me, st = storeInfo();
+  const pend = S.reports.filter(r => r.kid_id === me.id && r.status === 'pending').reduce((a,r) => a + r.credits, 0);
+  const recent = S.reports.filter(r => r.kid_id === me.id).slice(0, 5);
+  return `<div class="stack">
+    <div class="card hero">
+      <div class="muted small">שלום ${esc(me.display_name)} ${esc(me.avatar)} · היתרה שלך</div>
+      <div class="row" style="margin-top:6px"><span class="hero-num">${balanceOf(me.id)}</span><span style="font-size:1.6rem">⭐</span></div>
+      <div class="hero-row">
+        <div class="hero-pill">החודש צברת <b>${monthEarned(me.id)}</b></div>
+        ${pend ? `<div class="hero-pill">ממתין לאישור <b>${pend}</b></div>` : ''}
+        <div class="hero-pill">🛍️ ${esc(st.text)}</div>
+      </div>
+    </div>
+    ${weeklyCard(me.id, true)}
+  </div>
+  ${leaderboard(me.id)}
+  <div class="section-t">פעילות אחרונה</div>
+  ${recent.length ? `<div class="list">${recent.map(r => `<div class="item"><div class="em">${r.kind==='bonus' ? (r.credits<0?'⚠️':'🎉') : esc(chore(r.chore_id)?.emoji || '✅')}</div><div class="body"><div class="title">${esc(r.title)}</div><div class="sub">${fmtDate(r.created_at)}${r.admin_note ? ' · ' + esc(r.admin_note) : ''}</div></div><div class="side"><span class="credit">${r.credits>0?'+':''}${r.credits}</span>${statusChip(r.status)}</div></div>`).join('')}</div>` : empty('🌱', 'עוד אין פעילות — בחרו מטלה והתחילו!')}`;
+}
+
+function kidChores() {
+  const me = S.me, ws = weekStart(), sel = curSel(me.id);
+  const locked = sel && selReps(sel).length > 0;
+  const list = choresFor(me.id);
+  return `<h2>בחירת מטלה שבועית</h2>
+    <p class="muted" style="margin-bottom:14px">שבוע ${fmtWeek(ws)} · בוחרים מטלה אחת לשבוע. ${locked ? 'כבר דיווחת על המטלה שלך, אז השבוע אי אפשר להחליף.' : 'אפשר להחליף עד הדיווח הראשון.'}</p>
+    ${list.length ? `<div class="list">${list.map(c => {
+      const mine = sel && sel.chore_id === c.id;
+      const others = S.selections.filter(s => s.chore_id === c.id && s.week_start === ws && s.kid_id !== me.id).map(s => prof(s.kid_id)).filter(Boolean);
+      const taken = c.exclusive && others.length;
+      let btn;
+      if (mine) btn = `<span class="chip ok">✓ שלי השבוע</span>`;
+      else if (taken) btn = `<button class="btn sm ghost" disabled>תפוסה</button>`;
+      else if (locked) btn = `<button class="btn sm ghost" disabled>נעול</button>`;
+      else btn = `<button class="btn sm" data-act="pick" data-id="${c.id}">${sel ? 'החלפה' : 'בחירה'}</button>`;
+      return `<div class="item ${mine?'mine':''} ${taken&&!mine?'disabled':''}"><div class="em">${esc(c.emoji)}</div><div class="body">
+        <div class="title">${esc(c.title)}</div>${c.description ? `<div class="sub">${esc(c.description)}</div>` : ''}
+        <div class="chips"><span class="chip gold">⭐ ${c.credits}${c.times_per_week>1?' × '+c.times_per_week:''}</span>${c.times_per_week>1?`<span class="chip gray">עד ${c.times_per_week} פעמים בשבוע</span>`:''}${c.exclusive?'<span class="chip gray">🔒 לילד אחד</span>':''}${others.length?`<span class="chip">${taken?'נבחרה ע״י':'גם'} ${others.map(o=>esc(o.display_name)).join(', ')}</span>`:''}</div>
+      </div><div class="side">${btn}</div></div>`; }).join('')}</div>` : empty('📭', 'עדיין אין מטלות זמינות')}`;
+}
+
+function kidStore() {
+  const me = S.me, st = storeInfo(), bal = balanceOf(me.id);
+  const mine = S.redemptions.filter(r => r.kid_id === me.id).slice(0, 10);
+  const rewards = S.rewards.filter(r => r.active);
+  return `<div class="row-between" style="margin-bottom:12px"><h2>חנות הקרדיטים</h2><span class="chip gold" style="font-size:.95rem">יש לך ⭐ ${bal}</span></div>
+    <div class="banner ${st.open?'open':'closed'}"><span class="ic">${st.open?'🛍️':'⏰'}</span><div>${esc(st.text)}${st.open?'':'<div class="small" style="font-weight:400">בינתיים אפשר להסתכל ולתכנן 😉</div>'}</div></div>
+    <div class="rewards" style="margin-top:14px">${rewards.map(r => {
+      const out = r.stock !== null && r.stock <= 0;
+      const can = st.open && !out && bal >= r.cost;
+      const missing = r.cost - bal;
+      return `<div class="reward"><div class="em">${esc(r.emoji)}</div><div class="title">${esc(r.title)}</div>${r.description?`<div class="muted small">${esc(r.description)}</div>`:''}<div class="cost">⭐ ${r.cost}</div>
+        ${out ? '<span class="chip gray">אזל</span>' : r.stock !== null ? `<span class="muted small">נשארו ${r.stock}</span>` : ''}
+        <button class="btn sm ${can?'':'ghost'}" ${can?'':'disabled'} data-act="buy" data-id="${r.id}">${!st.open?'סגור':missing>0?`חסרים ${missing}`:'קנייה'}</button></div>`; }).join('') || empty('🎁', 'החנות עוד ריקה')}</div>
+    <div class="section-t">הבקשות שלי</div>
+    ${mine.length ? `<div class="list">${mine.map(r => `<div class="item"><div class="em">${esc(r.emoji||'🎁')}</div><div class="body"><div class="title">${esc(r.title)}</div><div class="sub">${fmtDate(r.created_at)}${r.admin_note?' · '+esc(r.admin_note):''}</div></div><div class="side"><span class="credit">-${r.cost}</span>${r.status==='approved'?'<span class="chip ok">התקבל 🎉</span>':statusChip(r.status)}${r.status==='pending'?`<button class="btn sm soft-bad" data-act="cancelBuy" data-id="${r.id}">ביטול</button>`:''}</div></div>`).join('')}</div>` : empty('🛒', 'עוד לא ביקשת פרסים')}`;
+}
+
+function activityList(kidId, limit = 40) {
+  const items = [
+    ...S.reports.filter(r => r.kid_id === kidId).map(r => ({t:r.created_at, html:`<div class="item"><div class="em">${r.kind==='bonus'?(r.credits<0?'⚠️':'🎉'):esc(chore(r.chore_id)?.emoji||'✅')}</div><div class="body"><div class="title">${esc(r.title)}</div><div class="sub">${fmtDate(r.created_at)}${r.note?' · "'+esc(r.note)+'"':''}${r.admin_note?' · '+esc(r.admin_note):''}</div></div><div class="side"><span class="credit">${r.credits>0?'+':''}${r.credits}</span>${statusChip(r.status)}</div></div>`})),
+    ...S.redemptions.filter(r => r.kid_id === kidId).map(r => ({t:r.created_at, html:`<div class="item"><div class="em">${esc(r.emoji||'🎁')}</div><div class="body"><div class="title">🛍️ ${esc(r.title)}</div><div class="sub">${fmtDate(r.created_at)}${r.admin_note?' · '+esc(r.admin_note):''}</div></div><div class="side"><span class="credit">-${r.cost}</span>${statusChip(r.status)}</div></div>`})),
+  ].sort((a,b) => b.t.localeCompare(a.t)).slice(0, limit);
+  return items.length ? `<div class="list">${items.map(i => i.html).join('')}</div>` : empty('📭', 'אין עדיין פעילות');
+}
+function monthsTable(kidId) {
+  return `<div class="card">${prevMonths(6).map(mk => `<div class="month-row"><span>${monthName(mk)}</span><span><span class="credit">+${monthEarned(kidId, mk)}</span> <span class="muted">· נוצלו ${monthSpent(kidId, mk)}</span></span></div>`).join('')}</div>`;
+}
+function kidHistory() {
+  return `<h2>ההיסטוריה שלי</h2><div class="section-t">סיכום חודשי</div>${monthsTable(S.me.id)}<div class="section-t">כל הפעילות</div>${activityList(S.me.id)}`;
+}
+
+const KID_VIEWS = { home:kidHome, chores:kidChores, store:kidStore, history:kidHistory };
+
+/* =====================================================================
+   מסכי מנהל
+   ===================================================================== */
+function adminOverview() {
+  const ks = kids(), ws = weekStart(), st = storeInfo();
+  const pend = pendingReports().length + pendingRedemptions().length;
+  const noPick = ks.filter(k => !curSel(k.id)).length;
+  return `<div class="grid stats">
+      <div class="stat ${pend?'alert':''}" data-act="tab" data-tab="approvals" style="cursor:pointer"><b>${pend}</b><span>ממתינים לאישור</span></div>
+      <div class="stat ${noPick?'alert':''}"><b>${ks.length - noPick}/${ks.length}</b><span>בחרו מטלה השבוע</span></div>
+      <div class="stat"><b>${ks.reduce((a,k) => a + monthEarned(k.id), 0)}</b><span>קרדיטים החודש</span></div>
+    </div>
+    <div class="banner ${st.open?'open':'closed'}" style="margin-top:12px"><span class="ic">${st.open?'🛍️':'⏰'}</span><div>${esc(st.text)}</div></div>
+    <div class="section-t"><span>הילדים · שבוע ${fmtWeek(ws)}</span></div>
+    ${ks.length ? `<div class="grid two">${ks.map(k => {
+      const sel = curSel(k.id), c = sel && chore(sel.chore_id), reps = sel ? selReps(sel) : [];
+      const ok = reps.filter(r => r.status==='approved').length, wait = reps.filter(r => r.status==='pending').length;
+      const kp = S.reports.filter(r => r.kid_id===k.id && r.status==='pending').length + S.redemptions.filter(r => r.kid_id===k.id && r.status==='pending').length;
+      return `<div class="card kidcard"><div class="head"><span class="avatar lg" style="--c:${k.color}">${esc(k.avatar)}</span><div style="flex:1"><h3>${esc(k.display_name)}</h3>${kp?`<span class="chip warn">${kp} ממתינים</span>`:'<span class="muted small">הכל מאושר</span>'}</div></div>
+        <div class="nums"><div><b>⭐ ${balanceOf(k.id)}</b>יתרה</div><div><b>${monthEarned(k.id)}</b>נצבר החודש</div><div><b>${monthSpent(k.id)}</b>נוצל החודש</div></div>
+        ${c ? `<div class="kidweek">${esc(c.emoji)} <b>${esc(c.title)}</b> · בוצע ${ok}/${c.times_per_week}${wait?` · <span style="color:var(--warn)">${wait} ממתינים</span>`:''}</div>` : `<div class="kidweek none">⚠️ עוד לא נבחרה מטלה השבוע</div>`}
+        <div class="row" style="margin-top:12px"><button class="btn sm ghost" data-act="bonus" data-id="${k.id}">± בונוס/קנס</button><button class="btn sm ghost" data-act="kidHist" data-id="${k.id}">היסטוריה</button>${!c?`<button class="btn sm ghost" data-act="assignWeek" data-id="${k.id}">שיבוץ מטלה</button>`:''}</div></div>`; }).join('')}</div>` : `<div class="card">${empty('👧', 'עוד אין ילדים — מוסיפים בלשונית "ילדים"')}</div>`}
+    ${pastWeeks()}`;
+}
+
+function pastWeeks() {
+  const ks = kids(); if (!ks.length) return '';
+  const weeks = [1,2,3,4].map(i => addDays(weekStart(), -7*i));
+  return `<div class="section-t">שבועות קודמים</div><div class="card" style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.88rem">
+    <tr><th style="text-align:right;padding:6px">שבוע</th>${ks.map(k => `<th style="padding:6px">${esc(k.avatar)} ${esc(k.display_name)}</th>`).join('')}</tr>
+    ${weeks.map(w => `<tr style="border-top:1px solid var(--line)"><td style="padding:8px 6px;white-space:nowrap">${fmtWeek(w)}</td>${ks.map(k => { const s = curSel(k.id, w), c = s && chore(s.chore_id); if (!s) return '<td style="text-align:center;color:var(--muted)">—</td>'; const reps = S.reports.filter(r => r.selection_id === s.id && r.status === 'approved').length; return `<td style="text-align:center;padding:6px">${esc(c?.emoji||'❔')} ${reps}/${c?.times_per_week ?? '?'}</td>`; }).join('')}</tr>`).join('')}
+  </table></div>`;
+}
+
+function adminApprovals() {
+  const reps = pendingReports(), reds = pendingRedemptions();
+  const reviewed = [...S.reports.filter(r => r.status !== 'pending' && r.kind === 'chore').map(r => ({...r, _t:'r'})), ...S.redemptions.filter(r => r.status !== 'pending').map(r => ({...r, _t:'d'}))]
+    .sort((a,b) => (b.reviewed_at||b.created_at).localeCompare(a.reviewed_at||a.created_at)).slice(0, 15);
+  const kidTag = id => { const k = prof(id); return k ? `<span class="avatar" style="--c:${k.color};width:34px;height:34px;font-size:18px">${esc(k.avatar)}</span>` : ''; };
+  return `<div class="section-t" style="margin-top:4px"><span>דיווחי ביצוע (${reps.length})</span>${reps.length > 1 ? `<button class="btn sm ok" data-act="approveAll">אישור הכל</button>` : ''}</div>
+    ${reps.length ? `<div class="list">${reps.map(r => `<div class="appr"><div class="top">${kidTag(r.kid_id)}<div style="flex:1"><div style="font-weight:700">${esc(prof(r.kid_id)?.display_name)} · ${esc(chore(r.chore_id)?.emoji||'')} ${esc(r.title)}</div><div class="muted small">${fmtDate(r.created_at)}${r.week_start?' · שבוע '+fmtWeek(r.week_start):''}</div></div></div>
+      ${r.note ? `<div class="note">💬 ${esc(r.note)}</div>` : ''}
+      <div class="acts"><span class="small muted">קרדיטים:</span><input class="mini" type="number" id="cr-${r.id}" value="${r.credits}"><span style="flex:1"></span><button class="btn sm soft-bad" data-act="rejectRep" data-id="${r.id}">✕ דחייה</button><button class="btn sm ok" data-act="approveRep" data-id="${r.id}">✓ אישור</button></div></div>`).join('')}</div>` : `<div class="card">${empty('✅', 'אין דיווחים שמחכים לאישור')}</div>`}
+    <div class="section-t">בקשות מהחנות (${reds.length})</div>
+    ${reds.length ? `<div class="list">${reds.map(r => `<div class="appr"><div class="top">${kidTag(r.kid_id)}<div style="flex:1"><div style="font-weight:700">${esc(prof(r.kid_id)?.display_name)} · ${esc(r.emoji||'🎁')} ${esc(r.title)}</div><div class="muted small">${fmtDate(r.created_at)} · <span class="credit">⭐ ${r.cost}</span></div></div></div>
+      <div class="acts"><span style="flex:1"></span><button class="btn sm soft-bad" data-act="rejectRed" data-id="${r.id}">✕ דחייה והחזרת קרדיטים</button><button class="btn sm ok" data-act="approveRed" data-id="${r.id}">🎁 נמסר</button></div></div>`).join('')}</div>` : `<div class="card">${empty('🛍️', 'אין בקשות פתוחות')}</div>`}
+    <div class="section-t">טופלו לאחרונה</div>
+    ${reviewed.length ? `<div class="list">${reviewed.map(r => `<div class="item">${kidTag(r.kid_id)}<div class="body"><div class="title">${r._t==='d'?'🛍️ ':''}${esc(r.title)}</div><div class="sub">${esc(prof(r.kid_id)?.display_name)} · ${fmtDate(r.reviewed_at||r.created_at)}${r.admin_note?' · '+esc(r.admin_note):''}</div></div><div class="side"><span class="credit">${r._t==='d'?'-'+r.cost:'+'+r.credits}</span>${statusChip(r.status)}<button class="btn sm ghost" data-act="${r._t==='d'?'reopenRed':'reopenRep'}" data-id="${r.id}">↺ ביטול החלטה</button></div></div>`).join('')}</div>` : empty('🗂️', 'עוד לא טופלו בקשות')}`;
+}
+
+function adminChores() {
+  return `<div class="row-between" style="margin-bottom:12px"><h2>רשימת מטלות</h2><button class="btn sm" data-act="editChore">＋ מטלה חדשה</button></div>
+    ${S.chores.length ? `<div class="list">${S.chores.map(c => {
+      const who = c.assigned_to && c.assigned_to.length ? c.assigned_to.map(id => prof(id)?.display_name).filter(Boolean).join(', ') : 'כל הילדים';
+      const takers = S.selections.filter(s => s.chore_id === c.id && s.week_start === weekStart()).map(s => prof(s.kid_id)?.avatar).join(' ');
+      return `<div class="item ${c.active?'':'disabled'}"><div class="em">${esc(c.emoji)}</div><div class="body"><div class="title">${esc(c.title)}</div>
+        <div class="chips"><span class="chip gold">⭐ ${c.credits}</span><span class="chip gray">${c.times_per_week}× בשבוע</span>${c.exclusive?'<span class="chip gray">🔒 לילד אחד</span>':''}<span class="chip gray">👥 ${esc(who)}</span>${!c.active?'<span class="chip bad">מושבתת</span>':''}${takers?`<span class="chip">השבוע: ${takers}</span>`:''}</div></div>
+        <div class="side"><button class="btn sm ghost" data-act="editChore" data-id="${c.id}">עריכה</button></div></div>`; }).join('')}</div>` : `<div class="card">${empty('📋', 'עוד אין מטלות')}</div>`}`;
+}
+
+function adminStore() {
+  const st = storeInfo();
+  return `<div class="row-between" style="margin-bottom:12px"><h2>חנות הקרדיטים</h2><button class="btn sm" data-act="editReward">＋ פרס חדש</button></div>
+    <div class="banner ${st.open?'open':'closed'}" style="margin-bottom:14px"><span class="ic">${st.open?'🛍️':'⏰'}</span><div>${esc(st.text)} <span class="small" style="font-weight:400">· משנים בלשונית ההגדרות</span></div></div>
+    ${S.rewards.length ? `<div class="list">${S.rewards.map(r => `<div class="item ${r.active?'':'disabled'}"><div class="em">${esc(r.emoji)}</div><div class="body"><div class="title">${esc(r.title)}</div>
+      <div class="chips"><span class="chip gold">⭐ ${r.cost}</span><span class="chip gray">${r.stock===null?'ללא הגבלה':'במלאי: '+r.stock}</span>${!r.active?'<span class="chip bad">מוסתר</span>':''}</div></div>
+      <div class="side"><button class="btn sm ghost" data-act="editReward" data-id="${r.id}">עריכה</button></div></div>`).join('')}</div>` : `<div class="card">${empty('🎁', 'עוד אין פרסים')}</div>`}`;
+}
+
+function adminKids() {
+  const all = kids(true);
+  return `<div class="row-between" style="margin-bottom:12px"><h2>הילדים</h2><button class="btn sm" data-act="editKid">＋ הוספת ילד</button></div>
+    ${all.length ? `<div class="list">${all.map(k => `<div class="item ${k.active?'':'disabled'}"><span class="avatar lg" style="--c:${k.color}">${esc(k.avatar)}</span><div class="body"><div class="title">${esc(k.display_name)}</div><div class="sub" dir="ltr" style="text-align:right">@${esc(k.username)}</div>${!k.active?'<span class="chip bad">מושבת</span>':''}</div>
+      <div class="side"><button class="btn sm ghost" data-act="editKid" data-id="${k.id}">עריכה</button><button class="btn sm ghost" data-act="setPass" data-id="${k.id}">🔑 סיסמה</button></div></div>`).join('')}</div>` : `<div class="card">${empty('👧', 'מוסיפים כאן חשבון לכל ילד — עם שם משתמש וסיסמה משלו')}</div>`}`;
+}
+
+function adminSettings() {
+  const s = S.settings;
+  return `<h2 style="margin-bottom:14px">הגדרות</h2>
+    <form class="card" id="setF">
+      <div class="field"><label>שם המשפחה / האפליקציה</label><input class="input" name="family_name" value="${esc(s.family_name||'')}"></div>
+      <div class="field"><label>מתי החנות פתוחה?</label>
+        <div class="seg" id="modeSeg">${[['auto','אוטומטי'],['open','פתוחה'],['closed','סגורה']].map(([v,l]) => `<button type="button" data-v="${v}" class="${s.store_mode===v?'on':''}">${l}</button>`).join('')}</div>
+        <input type="hidden" name="store_mode" value="${s.store_mode}">
+        <span class="hint">אוטומטי = נפתחת בימים האחרונים של כל חודש. "פתוחה" / "סגורה" עוקפים את זה.</span></div>
+      <div class="field"><label>כמה ימים בסוף החודש החנות פתוחה (במצב אוטומטי)</label><input class="input" type="number" min="1" max="15" name="store_days" value="${s.store_days}" style="width:110px"></div>
+      <button class="btn" type="submit">שמירה</button>
+    </form>
+    <div class="section-t">איך זה עובד</div>
+    <div class="card small muted" style="line-height:1.7">• כל ילד בוחר מטלה אחת לשבוע (ראשון–שבת) מתוך המטלות שמשויכות אליו.<br>• כל דיווח ביצוע מגיע אליך לאישור; רק אחרי אישור הקרדיטים נכנסים ליתרה.<br>• קרדיטים נצברים לאורך החודש, ובסוף החודש החנות נפתחת להמרה. יתרה שלא נוצלה ממשיכה לחודש הבא.<br>• קנייה בחנות מורידה קרדיטים מיד; אם דוחים — הקרדיטים חוזרים.</div>`;
+}
+
+const ADMIN_VIEWS = { overview:adminOverview, approvals:adminApprovals, chores:adminChores, store:adminStore, kids:adminKids, settings:adminSettings };
+
+/* =====================================================================
+   פעולות
+   ===================================================================== */
+const ACT = {
+  bg: (d, el, e) => { if (e.target === el) closeModal(); },
+  closeModal,
+  refresh: () => refresh().then(() => toast('עודכן')),
+  tab: d => { S.tab = d.tab; render(); window.scrollTo(0,0); },
+
+  account() {
+    const me = S.me;
+    const m = openModal('החשבון שלי', `<div class="row" style="margin-bottom:16px"><span class="avatar lg" style="--c:${me.color}">${esc(me.avatar)}</span><div><h3>${esc(me.display_name)}</h3><div class="muted small" dir="ltr" style="text-align:right">@${esc(me.username)}</div></div></div>
+      <form id="pwF"><div class="field"><label>שינוי סיסמה</label><input class="input" name="p" type="password" minlength="6" dir="ltr" placeholder="סיסמה חדשה" required></div><button class="btn ghost block" type="submit">עדכון סיסמה</button></form>
+      <div class="row-end"><button class="btn danger block" id="lo">יציאה מהחשבון</button></div>`);
+    m.querySelector('#lo').onclick = logout;
+    m.querySelector('#pwF').onsubmit = async ev => { ev.preventDefault(); const { error } = await sb.auth.updateUser({ password: ev.target.p.value }); if (error) return toast(errMsg(error), 'bad'); closeModal(); toast('הסיסמה עודכנה', 'ok'); };
+  },
+
+  /* ----- ילד ----- */
+  async pick(d) {
+    const sel = curSel(S.me.id), c = chore(d.id);
+    if (sel && !(await confirmBox('החלפת מטלה', `להחליף את המטלה השבועית ל"${esc(c.title)}"?`, 'החלפה'))) return;
+    await run(async () => {
+      if (sel) must(await sb.from('ch_selections').update({ chore_id: d.id }).eq('id', sel.id));
+      else must(await sb.from('ch_selections').insert({ chore_id: d.id, kid_id: S.me.id, week_start: weekStart() }));
+    }, `${c.emoji} המטלה נבחרה! בהצלחה 💪`);
+    S.tab = 'home'; render();
+  },
+  report() {
+    const sel = curSel(S.me.id), c = sel && chore(sel.chore_id); if (!c) return;
+    const m = openModal('דיווח ביצוע', `<div class="row" style="margin-bottom:14px"><div class="big-emoji">${esc(c.emoji)}</div><div><h3>${esc(c.title)}</h3><span class="credit">⭐ ${c.credits}</span> <span class="muted small">אחרי אישור</span></div></div>
+      <form id="repF"><div class="field"><label>רוצה לספר מה עשית? (לא חובה)</label><textarea class="input" name="note" maxlength="300" placeholder="למשל: פיניתי את המדיח וסידרתי גם את הסירים"></textarea></div><button class="btn big" type="submit">📨 שליחה לאישור</button></form>`);
+    m.querySelector('#repF').onsubmit = async ev => {
+      ev.preventDefault(); ev.target.querySelector('button').disabled = true;
+      const ok = await run(async () => must(await sb.from('ch_reports').insert({ kid_id: S.me.id, note: ev.target.note.value.trim() || null })), 'נשלח לאישור! 🙌');
+      if (ok) closeModal(); else ev.target.querySelector('button').disabled = false;
+    };
+  },
+  async buy(d) {
+    const r = S.rewards.find(x => x.id === d.id);
+    if (!(await confirmBox('קנייה בחנות', `${esc(r.emoji)} ${esc(r.title)}<br>יורדים ${r.cost} קרדיטים, והבקשה עוברת לאישור.`, 'כן, אני רוצה!'))) return;
+    await run(async () => must(await sb.from('ch_redemptions').insert({ reward_id: r.id, kid_id: S.me.id })), 'הבקשה נשלחה! 🎁');
+  },
+  async cancelBuy(d) {
+    if (!(await confirmBox('ביטול בקשה', 'לבטל את הבקשה? הקרדיטים יחזרו אליך.', 'ביטול הבקשה', 'danger'))) return;
+    await run(async () => must(await sb.from('ch_redemptions').delete().eq('id', d.id).eq('status','pending')), 'בוטל');
+  },
+
+  /* ----- מנהל: אישורים ----- */
+  async approveRep(d) {
+    const v = parseInt($('#cr-' + d.id)?.value, 10);
+    await run(async () => must(await sb.from('ch_reports').update({ status:'approved', credits: isNaN(v) ? undefined : v, reviewed_at: new Date().toISOString() }).eq('id', d.id)), 'אושר ✓');
+  },
+  async approveAll() {
+    const reps = pendingReports();
+    if (!(await confirmBox('אישור הכל', `לאשר ${reps.length} דיווחים?`, 'אישור הכל', 'ok'))) return;
+    await run(async () => { for (const r of reps) { const v = parseInt($('#cr-' + r.id)?.value, 10); must(await sb.from('ch_reports').update({ status:'approved', credits: isNaN(v) ? r.credits : v, reviewed_at: new Date().toISOString() }).eq('id', r.id)); } }, 'כולם אושרו ✓');
+  },
+  rejectRep(d) { reasonModal('דחיית דיווח', 'למשל: הכלים עוד היו בכיור', async note => must(await sb.from('ch_reports').update({ status:'rejected', admin_note: note, reviewed_at: new Date().toISOString() }).eq('id', d.id)), 'הדיווח נדחה'); },
+  async approveRed(d) { await run(async () => must(await sb.from('ch_redemptions').update({ status:'approved', reviewed_at: new Date().toISOString() }).eq('id', d.id)), 'סומן כנמסר 🎁'); },
+  rejectRed(d) { reasonModal('דחיית בקשה', 'הקרדיטים יחזרו לילד', async note => must(await sb.from('ch_redemptions').update({ status:'rejected', admin_note: note, reviewed_at: new Date().toISOString() }).eq('id', d.id)), 'נדחה, הקרדיטים הוחזרו'); },
+  async reopenRep(d) {
+    if (!(await confirmBox('ביטול החלטה', 'להחזיר את הדיווח למצב "ממתין"? אם אושר — הקרדיטים יורדו עד לאישור מחדש.', 'החזרה לממתין'))) return;
+    await run(async () => must(await sb.from('ch_reports').update({ status:'pending', admin_note:null, reviewed_at:null }).eq('id', d.id)), 'הוחזר לממתינים');
+  },
+  async reopenRed(d) {
+    const r = S.redemptions.find(x => x.id === d.id);
+    if (r.status === 'rejected' && balanceOf(r.kid_id) < r.cost) return toast('לילד אין כרגע מספיק קרדיטים כדי לפתוח מחדש', 'bad');
+    if (!(await confirmBox('ביטול החלטה', 'להחזיר את הבקשה למצב "ממתין"?', 'החזרה לממתין'))) return;
+    await run(async () => must(await sb.from('ch_redemptions').update({ status:'pending', admin_note:null, reviewed_at:null }).eq('id', d.id)), 'הוחזר לממתינים');
+  },
+
+  bonus(d) {
+    const k = prof(d.id);
+    const m = openModal(`בונוס / קנס ל${k.display_name}`, `<form id="bF"><div class="field"><label>כמות קרדיטים</label><input class="input" type="number" name="v" required placeholder="10 לבונוס, ‎-5 לקנס" dir="ltr"></div>
+      <div class="field"><label>סיבה</label><input class="input" name="t" maxlength="80" placeholder="עזרה מיוחדת לסבתא"></div><button class="btn big" type="submit">הוספה</button></form>`);
+    m.querySelector('#bF').onsubmit = async ev => {
+      ev.preventDefault(); const v = parseInt(ev.target.v.value, 10); if (!v) return toast('צריך מספר שונה מאפס', 'bad');
+      const ok = await run(async () => must(await sb.from('ch_reports').insert({ kid_id: k.id, kind:'bonus', title: ev.target.t.value.trim() || (v > 0 ? 'בונוס' : 'קנס'), credits: v, status:'approved', reviewed_at: new Date().toISOString() })), 'נוסף');
+      if (ok) closeModal();
+    };
+  },
+  kidHist(d) {
+    const k = prof(d.id);
+    openModal(`${k.avatar} ${k.display_name}`, `<div class="row" style="gap:16px;margin-bottom:6px"><span class="chip gold" style="font-size:.95rem">יתרה ⭐ ${balanceOf(k.id)}</span></div><div class="section-t">סיכום חודשי</div>${monthsTable(k.id)}<div class="section-t">פעילות</div>${activityList(k.id, 60)}`);
+  },
+  assignWeek(d) {
+    const k = prof(d.id), list = choresFor(k.id);
+    const m = openModal(`שיבוץ מטלה ל${k.display_name}`, `<p class="muted small" style="margin-bottom:10px">שבוע ${fmtWeek(weekStart())}</p><div class="list">${list.map(c => `<button class="item" style="cursor:pointer;text-align:right" data-cid="${c.id}"><div class="em">${esc(c.emoji)}</div><div class="body"><div class="title">${esc(c.title)}</div></div><span class="credit">⭐ ${c.credits}</span></button>`).join('')}</div>`);
+    m.querySelectorAll('[data-cid]').forEach(b => b.onclick = async () => {
+      const ok = await run(async () => must(await sb.from('ch_selections').insert({ kid_id: k.id, chore_id: b.dataset.cid, week_start: weekStart() })), 'שובץ');
+      if (ok) closeModal();
+    });
+  },
+
+  /* ----- מנהל: מטלות ----- */
+  editChore(d) {
+    const c = d.id ? chore(d.id) : { title:'', description:'', emoji:'🧹', credits:10, times_per_week:1, exclusive:false, assigned_to:null, active:true };
+    const ks = kids(true), asg = c.assigned_to || [];
+    const m = openModal(d.id ? 'עריכת מטלה' : 'מטלה חדשה', `<form id="cF">
+      <div class="field"><label>שם המטלה</label><input class="input" name="title" value="${esc(c.title)}" required maxlength="60"></div>
+      <div class="field"><label>אייקון</label>${emojiPicker('emoji', c.emoji, CHORE_EMOJIS)}</div>
+      <div class="field"><label>תיאור (לא חובה)</label><input class="input" name="description" value="${esc(c.description||'')}" maxlength="140"></div>
+      <div class="grid two"><div class="field"><label>קרדיטים לכל ביצוע</label><input class="input" type="number" min="0" name="credits" value="${c.credits}" required></div>
+      <div class="field"><label>כמה פעמים בשבוע</label><input class="input" type="number" min="1" max="14" name="times_per_week" value="${c.times_per_week}" required></div></div>
+      <label class="check"><input type="checkbox" name="exclusive" ${c.exclusive?'checked':''}> רק ילד אחד יכול לבחור אותה בכל שבוע</label>
+      <div class="field" style="margin-top:8px"><label>למי המטלה מתאימה?</label><span class="hint">אם לא מסמנים אף אחד — לכל הילדים</span>
+        ${ks.map(k => `<label class="check"><input type="checkbox" name="kid" value="${k.id}" ${asg.includes(k.id)?'checked':''}> ${esc(k.avatar)} ${esc(k.display_name)}</label>`).join('') || '<span class="muted small">עוד אין ילדים</span>'}</div>
+      <label class="check"><input type="checkbox" name="active" ${c.active?'checked':''}> פעילה (מוצגת לילדים)</label>
+      <div class="row-end">${d.id ? `<button type="button" class="btn soft-bad" id="del">מחיקה</button>` : ''}<button class="btn" type="submit">שמירה</button></div></form>`);
+    wirePickers(m);
+    m.querySelector('#cF').onsubmit = async ev => {
+      ev.preventDefault(); const f = ev.target;
+      const sel = [...f.querySelectorAll('[name=kid]:checked')].map(x => x.value);
+      const row = { title: f.title.value.trim(), emoji: f.emoji.value.trim() || '🧹', description: f.description.value.trim() || null, credits: +f.credits.value, times_per_week: +f.times_per_week.value, exclusive: f.exclusive.checked, assigned_to: sel.length ? sel : null, active: f.active.checked };
+      const ok = await run(async () => must(d.id ? await sb.from('ch_chores').update(row).eq('id', d.id) : await sb.from('ch_chores').insert(row)), 'נשמר');
+      if (ok) closeModal();
+    };
+    const del = m.querySelector('#del');
+    if (del) del.onclick = async () => {
+      if (!(await confirmBox('מחיקת מטלה', 'המחיקה תמחק גם את הבחירות שלה (הקרדיטים שאושרו נשמרים). כדי רק להסתיר — עדיף לבטל את "פעילה".', 'מחיקה', 'danger'))) return;
+      await run(async () => must(await sb.from('ch_chores').delete().eq('id', d.id)), 'נמחק');
+    };
+  },
+
+  /* ----- מנהל: חנות ----- */
+  editReward(d) {
+    const r = d.id ? S.rewards.find(x => x.id === d.id) : { title:'', description:'', emoji:'🎁', cost:20, stock:null, active:true };
+    const m = openModal(d.id ? 'עריכת פרס' : 'פרס חדש', `<form id="rF">
+      <div class="field"><label>שם הפרס</label><input class="input" name="title" value="${esc(r.title)}" required maxlength="60"></div>
+      <div class="field"><label>אייקון</label>${emojiPicker('emoji', r.emoji, REWARD_EMOJIS)}</div>
+      <div class="field"><label>תיאור (לא חובה)</label><input class="input" name="description" value="${esc(r.description||'')}" maxlength="140"></div>
+      <div class="grid two"><div class="field"><label>מחיר בקרדיטים</label><input class="input" type="number" min="1" name="cost" value="${r.cost}" required></div>
+      <div class="field"><label>מלאי</label><input class="input" type="number" min="0" name="stock" value="${r.stock ?? ''}" placeholder="ללא הגבלה"></div></div>
+      <label class="check"><input type="checkbox" name="active" ${r.active?'checked':''}> מוצג בחנות</label>
+      <div class="row-end">${d.id ? `<button type="button" class="btn soft-bad" id="del">מחיקה</button>` : ''}<button class="btn" type="submit">שמירה</button></div></form>`);
+    wirePickers(m);
+    m.querySelector('#rF').onsubmit = async ev => {
+      ev.preventDefault(); const f = ev.target;
+      const row = { title: f.title.value.trim(), emoji: f.emoji.value.trim() || '🎁', description: f.description.value.trim() || null, cost: +f.cost.value, stock: f.stock.value === '' ? null : +f.stock.value, active: f.active.checked };
+      const ok = await run(async () => must(d.id ? await sb.from('ch_rewards').update(row).eq('id', d.id) : await sb.from('ch_rewards').insert(row)), 'נשמר');
+      if (ok) closeModal();
+    };
+    const del = m.querySelector('#del');
+    if (del) del.onclick = async () => {
+      if (!(await confirmBox('מחיקת פרס', 'למחוק את הפרס? בקשות קודמות נשמרות בהיסטוריה.', 'מחיקה', 'danger'))) return;
+      await run(async () => must(await sb.from('ch_rewards').delete().eq('id', d.id)), 'נמחק');
+    };
+  },
+
+  /* ----- מנהל: ילדים ----- */
+  editKid(d) {
+    const isNew = !d.id;
+    const k = isNew ? { display_name:'', username:'', avatar: AVATARS[kids(true).length % AVATARS.length], color: COLORS[(kids(true).length + 1) % COLORS.length], active:true } : prof(d.id);
+    const m = openModal(isNew ? 'הוספת ילד' : `עריכה · ${k.display_name}`, `<form id="kF">
+      <div class="field"><label>שם</label><input class="input" name="display_name" value="${esc(k.display_name)}" required maxlength="30"></div>
+      ${isNew ? `<div class="field"><label>שם משתמש לכניסה</label><input class="input" name="username" dir="ltr" autocapitalize="none" required><span class="hint">באנגלית: אותיות, ספרות, נקודה או מקף (3–20)</span></div>
+      <div class="field"><label>סיסמה</label><input class="input" name="password" dir="ltr" minlength="6" required><span class="hint">לפחות 6 תווים. אפשר לאפס בכל עת.</span></div>` : ''}
+      <div class="field"><label>אווטאר</label>${emojiPicker('avatar', k.avatar, AVATARS)}</div>
+      <div class="field"><label>צבע</label><input type="hidden" name="color" value="${k.color}"><div class="colors" data-for="color">${COLORS.map(c => `<button type="button" data-c="${c}" class="${c===k.color?'on':''}" style="background:${c}"></button>`).join('')}</div></div>
+      ${!isNew ? `<label class="check"><input type="checkbox" name="active" ${k.active?'checked':''}> החשבון פעיל</label>` : ''}
+      <div class="row-end"><button class="btn" type="submit">${isNew ? 'יצירת חשבון' : 'שמירה'}</button></div></form>`);
+    wirePickers(m);
+    m.querySelector('#kF').onsubmit = async ev => {
+      ev.preventDefault(); const f = ev.target, btn = f.querySelector('[type=submit]'); btn.disabled = true;
+      const base = { display_name: f.display_name.value.trim(), avatar: f.avatar.value.trim() || '🙂', color: f.color.value };
+      let ok;
+      if (isNew) {
+        const u = f.username.value.trim().toLowerCase();
+        if (!USER_RE.test(u)) { btn.disabled = false; return toast('שם המשתמש צריך להיות באנגלית, 3–20 תווים', 'bad'); }
+        if (S.profiles.some(p => p.username === u)) { btn.disabled = false; return toast('שם המשתמש כבר תפוס', 'bad'); }
+        ok = await run(async () => {
+          const tmp = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, { auth:{ persistSession:false, autoRefreshToken:false, detectSessionInUrl:false, storageKey:'matalot-tmp' } });
+          const { data, error } = await tmp.auth.signUp({ email: toEmail(u), password: f.password.value });
+          if (error) throw error;
+          if (!data.user || (data.user.identities && data.user.identities.length === 0)) throw new Error('שם המשתמש כבר קיים במערכת');
+          must(await sb.from('ch_profiles').insert({ id: data.user.id, username: u, role:'kid', ...base }));
+          if (!data.session) toast('נוצר — אבל צריך לכבות Confirm email ב-Supabase כדי שהילד יוכל להיכנס', 'bad');
+        }, `החשבון של ${base.display_name} נוצר 🎉`);
+      } else {
+        ok = await run(async () => must(await sb.from('ch_profiles').update({ ...base, active: f.active.checked }).eq('id', d.id)), 'נשמר');
+      }
+      if (ok) closeModal(); else btn.disabled = false;
+    };
+  },
+  setPass(d) {
+    const k = prof(d.id);
+    const m = openModal(`סיסמה חדשה ל${k.display_name}`, `<form id="spF"><p class="muted small" style="margin-bottom:10px">שם המשתמש: <b dir="ltr">${esc(k.username)}</b></p><div class="field"><label>סיסמה חדשה</label><input class="input" name="p" dir="ltr" minlength="6" required></div><button class="btn big" type="submit">עדכון</button></form>`);
+    m.querySelector('#spF').onsubmit = async ev => {
+      ev.preventDefault();
+      const ok = await run(async () => must(await sb.rpc('ch_admin_set_password', { p_kid: k.id, p_password: ev.target.p.value })), 'הסיסמה עודכנה');
+      if (ok) closeModal();
+    };
+  },
+};
+
+function reasonModal(title, placeholder, fn, okMsg) {
+  const m = openModal(title, `<form id="rsF"><div class="field"><label>הסבר לילד (לא חובה)</label><input class="input" name="n" maxlength="140" placeholder="${esc(placeholder)}"></div><button class="btn danger big" type="submit">דחייה</button></form>`);
+  m.querySelector('#rsF').onsubmit = async ev => { ev.preventDefault(); const ok = await run(() => fn(ev.target.n.value.trim() || null), okMsg); if (ok) closeModal(); };
+}
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el) return;
+  const fn = ACT[el.dataset.act]; if (fn) fn(el.dataset, el, e);
+});
+document.addEventListener('submit', e => {
+  if (e.target.id !== 'setF') return; e.preventDefault(); const f = e.target;
+  run(async () => must(await sb.from('ch_settings').update({ family_name: f.family_name.value.trim() || 'מטלות הבית', store_mode: f.store_mode.value, store_days: Math.min(15, Math.max(1, +f.store_days.value || 3)) }).eq('id', 1)), 'ההגדרות נשמרו');
+});
+document.addEventListener('click', e => {
+  const b = e.target.closest('#modeSeg button'); if (!b) return;
+  document.querySelectorAll('#modeSeg button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelector('#setF [name=store_mode]').value = b.dataset.v;
+});
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+boot();
+</script>
+</body>
+</html>
