@@ -236,6 +236,43 @@ textarea.input{min-height:80px;resize:vertical}
 .cell-btn:hover{background:var(--primary-soft)}
 .confetti{position:fixed;top:-40px;z-index:70;font-size:26px;pointer-events:none;animation:fall linear forwards}
 @keyframes fall{to{transform:translateY(110vh) rotate(540deg);opacity:.2}}
+
+/* update 3 */
+.family{border:2px solid #fde3a7;background:linear-gradient(180deg,#fffaf0,#fff)}
+.family .head{display:flex;gap:12px;align-items:center}
+.family .em{font-size:34px;width:58px;height:58px;border-radius:18px;background:var(--gold-soft);display:grid;place-items:center;flex:none}
+.givers{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.giver{display:inline-flex;align-items:center;gap:4px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:3px 10px 3px 4px;font-size:.82rem}
+.giver .avatar{width:24px;height:24px;font-size:13px;border-width:1.5px}
+.streak-card{display:flex;gap:10px;align-items:center;background:linear-gradient(90deg,#fff1e6,#fff);border:1px solid #fed7aa;font-weight:600;color:#9a3412}
+.streak-card .ic{font-size:28px}
+.task{border-inline-start:4px solid var(--gold)}
+.ppl{display:flex;gap:4px;align-items:center;margin-top:6px}
+.ppl .avatar{width:26px;height:26px;font-size:14px;border-width:1.5px}
+.slot{width:26px;height:26px;border-radius:50%;border:1.5px dashed #cfc9ee}
+.photo-pick{display:block;cursor:pointer}
+.photo-box{display:flex;align-items:center;justify-content:center;gap:6px;padding:14px;border:2px dashed var(--line);border-radius:14px;color:var(--primary);font-weight:600;background:#faf9ff}
+.photo-prev{display:block;max-width:100%;max-height:220px;margin:8px auto 0;border-radius:12px}
+.appr-photo{display:block;width:100%;max-height:220px;object-fit:cover;border-radius:12px;margin-top:10px;background:var(--bg);cursor:zoom-in;min-height:60px}
+.praise{margin-top:10px}
+.praise .input{padding:9px 12px;font-size:.92rem}
+.praise-chips{display:flex;gap:6px;overflow-x:auto;margin-top:6px;padding-bottom:2px}
+.chip-btn{border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 10px;font-size:.8rem;white-space:nowrap;cursor:pointer;color:var(--ink)}
+.chip-btn:hover{background:var(--primary-soft)}
+.praise-note{font-size:.85rem;color:var(--primary);margin-top:2px}
+.sug{display:flex;gap:10px;align-items:center;padding:10px 0}
+.sug+.sug{border-top:1px solid var(--line)}
+.cert{border-radius:22px;padding:22px 18px;text-align:center;background:radial-gradient(circle at top,#fff8e1,#fff 60%);border:3px double #f5a50b;position:relative}
+.cert .ttl{font-size:.85rem;letter-spacing:.08em;color:#a86b00;font-weight:700}
+.cert .mon{font-size:1.5rem;font-weight:800;margin:4px 0 12px}
+.cert .avatar{margin:0 auto}
+.cert .name{font-size:1.35rem;font-weight:800;margin-top:8px}
+.cert .badge-t{display:inline-block;margin-top:6px;background:var(--primary);color:#fff;border-radius:999px;padding:5px 14px;font-weight:700}
+.cert .g{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
+.cert .g div{background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 4px;font-size:.75rem;color:var(--muted)}
+.cert .g b{display:block;font-size:1.3rem;color:var(--ink)}
+.cert .q{margin-top:14px;font-style:italic;color:var(--primary)}
+.cert .sig{margin-top:16px;font-weight:700;color:#a86b00}
 </style>
 </head>
 <body>
@@ -291,7 +328,8 @@ function must(res) { if (res.error) throw res.error; return res.data; }
 
 /* ---------------- מצב ---------------- */
 let sb, liveChan, liveTimer;
-const S = { me:null, settings:{store_mode:'auto', store_days:3, family_name:'מטלות הבית'}, profiles:[], chores:[], selections:[], reports:[], rewards:[], redemptions:[], reminders:[], balances:{}, tab:null, sub:{}, push:'unknown' };
+const S = { me:null, settings:{store_mode:'auto', store_days:3, family_name:'מטלות הבית'}, profiles:[], chores:[], selections:[], reports:[], rewards:[], redemptions:[], reminders:[], tasks:[], joins:[], contribs:[], priceSugs:[], photoUrls:{}, balances:{}, tab:null, sub:{}, push:'unknown' };
+const PRAISES = ['כל הכבוד! 👏','עבודה מעולה 💪','תודה שעזרת לבית ❤️','ראיתי שהשקעת! ⭐','אלופ/ה! 🏆','איזה כיף לבית מסודר 😍'];
 const DAY_LETTERS = ['א','ב','ג','ד','ה','ו','ש'];
 const CHEERS = ['כל ביצוע מקרב אותך לפרס 💪','את/ה חלק חשוב מהבית שלנו ❤️','צעד קטן, קרדיטים גדולים ⭐','מי שמתחיל מוקדם — מסיים בכיף 😎','אלופים לא מחכים לרגע האחרון 🏆','הבית אומר תודה! 🏠'];
 
@@ -302,7 +340,16 @@ const balanceOf = id => S.balances[id] || 0;
 const curSel = (kid, ws = weekStart()) => S.selections.find(s => s.kid_id === kid && s.week_start === ws);
 const selReps = sel => S.reports.filter(r => r.selection_id === sel.id && r.status !== 'rejected').sort((a,b) => a.created_at.localeCompare(b.created_at));
 const monthEarned = (kid, mk = monthKey()) => S.reports.filter(r => r.kid_id === kid && r.status === 'approved' && monthKey(new Date(r.created_at)) === mk).reduce((a,r) => a + r.credits, 0);
-const monthSpent = (kid, mk = monthKey()) => S.redemptions.filter(r => r.kid_id === kid && r.status !== 'rejected' && monthKey(new Date(r.created_at)) === mk).reduce((a,r) => a + r.cost, 0);
+const monthSpent = (kid, mk = monthKey()) => S.redemptions.filter(r => r.kid_id === kid && r.status !== 'rejected' && monthKey(new Date(r.created_at)) === mk).reduce((a,r) => a + r.cost, 0)
+  + S.contribs.filter(c => c.kid_id === kid && monthKey(new Date(c.created_at)) === mk).reduce((a,c) => a + c.amount, 0);
+const poolOf = r => S.contribs.filter(c => c.reward_id === r.id && c.round === r.shared_round).reduce((a,c) => a + c.amount, 0);
+const familyRewards = () => S.rewards.filter(r => r.active && r.shared);
+const taskJoins = id => S.joins.filter(j => j.task_id === id).sort((a,b) => a.created_at.localeCompare(b.created_at));
+const taskClaim = id => S.reports.find(r => r.task_id === id && r.status === 'pending');
+const taskExpired = t => !!t.deadline && t.deadline < ilDate();
+const openTasks = () => S.tasks.filter(t => t.status === 'open' && !taskExpired(t));
+const fmtDay = iso => { const [,m,d] = iso.split('-').map(Number); return `${d}.${m}`; };
+const repEmoji = r => r.kind === 'task' ? '⚡' : r.kind === 'bonus' ? (r.auto === 'streak' ? '🔥' : r.credits < 0 ? '⚠️' : '🎉') : esc(chore(r.chore_id)?.emoji || '✅');
 const pendingReports = () => S.reports.filter(r => r.status === 'pending');
 const pendingRedemptions = () => S.redemptions.filter(r => r.status === 'pending');
 const choresFor = kid => S.chores.filter(c => c.active && (!c.assigned_to || !c.assigned_to.length || c.assigned_to.includes(kid)));
@@ -324,6 +371,13 @@ async function refresh(silent) {
   try {
     const since = addDays(weekStart(), -7*26);
     const remP = sb.from('ch_reminders').select('*');
+    const opt = q => Promise.resolve(q).then(r => r.error ? [] : (r.data || []), () => []);   // טבלאות של עדכון 3 — אם עוד לא הורץ, פשוט ריק
+    const extra = Promise.all([
+      opt(sb.from('ch_tasks').select('*').order('created_at', {ascending:false}).limit(100)),
+      opt(sb.from('ch_task_joins').select('*')),
+      opt(sb.from('ch_contributions').select('*').order('created_at', {ascending:false}).limit(1000)),
+      S.me && S.me.role === 'admin' ? opt(sb.rpc('ch_price_suggestions')) : Promise.resolve([]),
+    ]);
     const [st, pr, ch, se, re, rw, rd, bl, rm] = await Promise.all([
       sb.from('ch_settings').select('*').eq('id',1).maybeSingle(),
       sb.from('ch_profiles').select('*').order('created_at'),
@@ -336,6 +390,7 @@ async function refresh(silent) {
       remP,
     ]);
     S.reminders = rm.error ? [] : rm.data;   // אם עדכון 2 עוד לא הורץ — פשוט בלי תזכורות
+    [S.tasks, S.joins, S.contribs, S.priceSugs] = await extra;
     if (st.data) S.settings = st.data;
     S.profiles = must(pr); S.chores = must(ch); S.selections = must(se);
     S.reports = must(re); S.rewards = must(rw); S.redemptions = must(rd);
@@ -352,7 +407,7 @@ function subscribeLive() {
   if (liveChan) sb.removeChannel(liveChan);
   const kick = () => { clearTimeout(liveTimer); liveTimer = setTimeout(() => refresh(true), 600); };
   liveChan = sb.channel('ch-live');
-  ['ch_reports','ch_redemptions','ch_selections'].forEach(t => liveChan.on('postgres_changes', {event:'*', schema:'public', table:t}, kick));
+  ['ch_reports','ch_redemptions','ch_selections','ch_tasks','ch_task_joins','ch_contributions'].forEach(t => liveChan.on('postgres_changes', {event:'*', schema:'public', table:t}, kick));
   liveChan.subscribe();
 }
 let hiddenAt = 0;
@@ -368,7 +423,8 @@ function goHash(h) {
   h = (h || '').replace(/^.*#/, '');
   if (!S.me || !h) return;
   const views = S.me.role === 'admin' ? ADMIN_VIEWS : KID_VIEWS;
-  if (views[h]) { S.tab = h; closeModal(); render(); }
+  if (h === 'certificate' && S.me.role === 'kid') { closeModal(); ACT.cert({ id: S.me.id, month: monthKey() }); }
+  else if (views[h]) { S.tab = h; closeModal(); render(); }
   try { history.replaceState(null, '', location.pathname + location.search); } catch (_) {}
 }
 window.addEventListener('hashchange', () => goHash(location.hash));
@@ -439,6 +495,122 @@ function confetti() {
     document.body.appendChild(s); setTimeout(() => s.remove(), 4000);
   }
 }
+function streakInfo(kid) {
+  const N = Math.max(2, S.settings.streak_weeks || 4), B = S.settings.streak_bonus || 0;
+  const ws = weekStart(), thisDone = weekDone(kid, ws);
+  let prev = 0, w = addDays(ws, -7);
+  while (weekDone(kid, w) && prev < 60) { prev++; w = addDays(w, -7); }
+  const n = prev + (thisDone ? 1 : 0);
+  let msg = '';
+  if (B > 0) {
+    const wk = k => k === 1 ? 'שבוע אחד' : `${k} שבועות`;
+    if (thisDone) {
+      const left = N - (n % N);
+      msg = n % N === 0 ? `השלמת ${n} שבועות ברצף — הרווחת בונוס של ${B} קרדיטים! 🎉` : `השלמת ${wk(n)} ברצף. עוד ${wk(left)} יזכו אותך בבונוס של ${B} קרדיטים`;
+    } else if (prev > 0) {
+      const need = N - (prev % N);
+      msg = need === 1 ? `השלמת ${wk(prev)} ברצף. השלמת השבוע הזה תזכה אותך בבונוס של ${B} קרדיטים!` : `השלמת ${wk(prev)} ברצף. עוד ${need} שבועות (כולל השבוע) לבונוס של ${B} קרדיטים`;
+    } else msg = `${N} שבועות ברצף של מטלה שהושלמה = בונוס של ${B} קרדיטים. מתחילים השבוע!`;
+  }
+  return { n, prev, thisDone, N, B, msg };
+}
+function streakCard(kid) { const si = streakInfo(kid); return si.msg ? `<div class="card streak-card"><span class="ic">🔥</span><div>${esc(si.msg)}</div></div>` : ''; }
+
+/* תעודה חודשית — זמינה מהערב (19:00) שלפני פתיחת החנות, ותמיד לחודשים קודמים */
+function certAvailable(mk = monthKey()) {
+  if (mk < monthKey()) return true;
+  const [y, m] = mk.split('-').map(Number), last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const openFrom = last - (S.settings.store_days || 3) + 1, d = +ilDate().slice(8);
+  const h = +new Intl.DateTimeFormat('en-GB', { timeZone:'Asia/Jerusalem', hour:'2-digit', hourCycle:'h23' }).format(new Date());
+  return d > openFrom - 1 || (d === openFrom - 1 && h >= 19);
+}
+function certStats(kid, mk) {
+  const inM = r => monthKey(new Date(r.reviewed_at || r.created_at)) === mk;
+  const appr = S.reports.filter(r => r.kid_id === kid && r.status === 'approved' && inM(r));
+  const weeks = [...new Set(S.selections.filter(s => s.kid_id === kid && addDays(s.week_start, 3).slice(0, 7) === mk).map(s => s.week_start))];
+  const st = {
+    chores: appr.filter(r => r.kind === 'chore').length,
+    tasks: appr.filter(r => r.kind === 'task').length,
+    earned: appr.reduce((a, r) => a + r.credits, 0),
+    weeks: weeks.length, done: weeks.filter(w => weekDone(kid, w)).length,
+    gave: S.contribs.filter(c => c.kid_id === kid && monthKey(new Date(c.created_at)) === mk).reduce((a, c) => a + c.amount, 0),
+    praises: [...new Set(appr.map(r => r.admin_note).filter(Boolean))].slice(0, 3),
+    streak: streakInfo(kid).n,
+  };
+  st.title = st.weeks >= 3 && st.done === st.weeks ? '🏆 אלופ/ת המטלות' : st.tasks >= 2 ? '⚡ כוכב/ת הבונוסים' : st.gave > 0 ? '🤝 שחקן/ית קבוצה' : st.done >= 2 ? '💪 מתמיד/ה' : st.chores > 0 ? '⭐ עוזר/ת הבית' : '🌱 החודש הבא שלך!';
+  return st;
+}
+function certHtml(kid, mk) {
+  const k = prof(kid), st = certStats(kid, mk), cur = mk === monthKey();
+  return `<div class="cert"><div class="ttl">📜 תעודת סיכום חודשית</div><div class="mon">${monthName(mk)}</div>
+    <span class="avatar lg" style="--c:${k.color}">${esc(k.avatar)}</span><div class="name">${esc(k.display_name)}</div><div class="badge-t">${st.title}</div>
+    <div class="g"><div><b>${st.chores}</b>ביצועים שאושרו</div><div><b>${st.done}/${st.weeks}</b>שבועות מושלמים</div><div><b>⭐ ${st.earned}</b>קרדיטים</div>
+      <div><b>⚡ ${st.tasks}</b>משימות בונוס</div><div><b>🤝 ${st.gave}</b>לקופה המשפחתית</div><div><b>🔥 ${st.streak}</b>שבועות ברצף</div></div>
+    ${st.praises.length ? st.praises.map(p => `<div class="q">״${esc(p)}״</div>`).join('') : ''}
+    <div class="sig">באהבה, ${esc(adminName())} ❤️</div>
+    ${cur && kid === S.me.id ? `<p class="muted small" style="margin-top:10px">🛍️ ${esc(storeInfo().text)} · יש לך ⭐ ${balanceOf(kid)}</p>` : ''}</div>`;
+}
+function certButtons(kid) {
+  const months = prevMonths(6).filter(mk => certAvailable(mk) && (mk === monthKey() || S.reports.some(r => r.kid_id === kid && r.status === 'approved' && monthKey(new Date(r.created_at)) === mk)));
+  return months.length ? `<div class="row" style="flex-wrap:wrap">${months.map(mk => `<button class="btn sm ghost" data-act="cert" data-id="${kid}" data-month="${mk}">📜 ${monthName(mk)}</button>`).join('')}</div>` : '<p class="muted small">התעודה הראשונה תגיע בערב שלפני פתיחת החנות 😉</p>';
+}
+
+/* תמונות */
+async function compressImage(file) {
+  const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('לא הצלחתי לקרוא את התמונה')); i.src = URL.createObjectURL(file); });
+  const sc = Math.min(1, 1280 / Math.max(img.width, img.height));
+  const c = document.createElement('canvas'); c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(img.src);
+  return await new Promise(res => c.toBlob(res, 'image/jpeg', 0.72));
+}
+async function uploadPhoto(file) {
+  const blob = await compressImage(file);
+  const path = `${S.me.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+  must(await sb.storage.from('ch-photos').upload(path, blob, { contentType: 'image/jpeg', upsert: false }));
+  return path;
+}
+function photoField(required) {
+  return `<div class="field"><label>📷 תמונה ${required ? '<span style="color:var(--bad)">(חובה במטלה הזו)</span>' : '(לא חובה)'}</label>
+    <label class="photo-pick"><input type="file" name="photo" accept="image/*" hidden><span class="photo-box">📷 צילום או בחירת תמונה</span><img class="photo-prev" hidden alt=""></label>
+    <span class="hint">התמונה נמחקת אוטומטית אחרי שהדיווח מאושר</span></div>`;
+}
+function wirePhoto(m) {
+  const inp = m.querySelector('[name=photo]'); if (!inp) return;
+  inp.onchange = () => { const f = inp.files[0], img = m.querySelector('.photo-prev'); if (!f) return; img.src = URL.createObjectURL(f); img.hidden = false; m.querySelector('.photo-box').textContent = '🔄 החלפת תמונה'; };
+}
+async function submitReport(m, base, required, okMsg) {
+  const f = m.querySelector('form'), btn = f.querySelector('[type=submit]'), file = f.photo && f.photo.files[0];
+  if (required && !file) return toast('צריך לצרף תמונה 📷', 'bad');
+  btn.disabled = true; btn.textContent = file ? 'מעלה תמונה…' : 'שולח…';
+  const ok = await run(async () => {
+    const photo_path = file ? await uploadPhoto(file) : null;
+    must(await sb.from('ch_reports').insert({ ...base, kid_id: S.me.id, note: f.note.value.trim() || null, photo_path }));
+  }, okMsg);
+  if (ok) closeModal(); else { btn.disabled = false; btn.textContent = '📨 שליחה לאישור'; }
+}
+function loadPhotos() {
+  document.querySelectorAll('img[data-photo]').forEach(async img => {
+    const p = img.dataset.photo, c = S.photoUrls[p];
+    if (c && c.exp > Date.now()) { if (img.src !== c.url) img.src = c.url; return; }
+    const { data } = await sb.storage.from('ch-photos').createSignedUrl(p, 900);
+    if (data) { S.photoUrls[p] = { url: data.signedUrl, exp: Date.now() + 840000 }; img.src = data.signedUrl; }
+    else img.replaceWith(Object.assign(document.createElement('div'), { className: 'muted small', textContent: '📷 התמונה כבר לא זמינה' }));
+  });
+}
+
+/* קופה משפחתית */
+function familyCard(r, compact) {
+  const pool = poolOf(r), pct = Math.min(100, Math.round(pool / r.cost * 100)), full = pool >= r.cost;
+  const givers = {}; S.contribs.filter(c => c.reward_id === r.id && c.round === r.shared_round).forEach(c => givers[c.kid_id] = (givers[c.kid_id] || 0) + c.amount);
+  const isKid = S.me.role === 'kid';
+  return `<div class="card family"><div class="head"><div class="em">${esc(r.emoji)}</div><div style="flex:1"><div class="muted small">🏡 פרס משפחתי · חוסכים ביחד</div><b>${esc(r.title)}</b></div><span class="credit">${pool}/${r.cost}</span></div>
+    <div class="bar"><span style="width:${pct}%"></span></div>
+    ${Object.keys(givers).length && !compact ? `<div class="givers">${Object.entries(givers).sort((a,b) => b[1]-a[1]).map(([id, v]) => { const k = prof(id); return k ? `<span class="giver"><span class="avatar" style="--c:${k.color}">${esc(k.avatar)}</span>${esc(k.display_name)} · ${v}</span>` : ''; }).join('')}</div>` : ''}
+    ${full ? `<div class="done-msg" style="margin-top:12px">🎉 הקופה מלאה! ${isKid ? esc(adminName()) + ' יממש את הפרס בקרוב' : 'אפשר לממש את הפרס'}</div>`
+      : isKid ? `<div class="row-between" style="margin-top:12px"><span class="muted small">חסרים עוד ${r.cost - pool} קרדיטים</span><button class="btn sm" data-act="contribute" data-id="${r.id}">🤝 תרומה לקופה</button></div>` : ''}
+  </div>`;
+}
+
 function lsGet(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
 function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
 
@@ -466,12 +638,13 @@ function showWelcome() {
       big = '🏆'; head = 'סיימת את המטלה של השבוע!'; sub = 'כל הכבוד, ממש אלופ/ה'; btns = `<button class="btn big" data-act="closeModal">יש!</button>`;
     }
   }
-  const st = streak(me.id);
   const body = `<div class="welcome">
-    ${ok.length || bad.length ? `<div class="box">${ok.map(r => `<div class="cele"><span>🎉 ${esc(r.title)}</span><b class="credit">${r.credits > 0 ? '+' : ''}${r.credits}</b></div>`).join('')}${bad.map(r => `<div class="cele"><span>✕ ${esc(r.title)} לא אושר${r.admin_note ? ' · ' + esc(r.admin_note) : ''}</span></div>`).join('')}</div>` : ''}
+    ${ok.length || bad.length ? `<div class="box">${ok.map(r => `<div class="cele"><span>${repEmoji(r)} ${esc(r.title)}${r.admin_note ? `<div class="praise-note">💬 ${esc(r.admin_note)}</div>` : ''}</span><b class="credit">${r.credits > 0 ? '+' : ''}${r.credits}</b></div>`).join('')}${bad.map(r => `<div class="cele"><span>✕ ${esc(r.title)} לא אושר${r.admin_note ? ' · ' + esc(r.admin_note) : ''}</span></div>`).join('')}</div>` : ''}
     <div class="big">${esc(big)}</div><h3>${esc(head)}</h3><p class="muted">${sub}</p>
     ${goalCard(me.id, true)}
-    ${st >= 2 ? `<div class="box" style="text-align:center">🔥 <b>${st} שבועות ברצף</b> שהמטלה הושלמה!</div>` : ''}
+    ${(() => { const si = streakInfo(me.id); return si.msg && (si.prev || si.thisDone) ? `<div class="box" style="text-align:center">🔥 ${esc(si.msg)}</div>` : ''; })()}
+    ${(() => { const mine = openTasks().filter(t => taskJoins(t.id).some(j => j.kid_id === me.id) && !taskClaim(t.id)); const free = openTasks().filter(t => !taskJoins(t.id).some(j => j.kid_id === me.id) && taskJoins(t.id).length < t.max_people); return mine.length ? `<div class="box">⚡ המשימה שלך: <b>${esc(mine[0].title)}</b> — אל תשכח/י לדווח כשמסיימים</div>` : free.length ? `<div class="box">⚡ יש ${free.length === 1 ? 'משימת בונוס פתוחה' : free.length + ' משימות בונוס פתוחות'} — <a href="#chores">להצצה</a></div>` : ''; })()}
+    ${certAvailable() ? `<button class="btn ghost block" style="margin-top:12px" data-act="cert" data-id="${me.id}" data-month="${monthKey()}">📜 תעודת הסיכום של ${HE_MONTHS[+monthKey().slice(5) - 1]} מוכנה!</button>` : ''}
     <div class="quote">${CHEERS[Math.floor(Math.random() * CHEERS.length)]}</div>
     <div style="margin-top:16px">${btns}</div></div>`;
   openModal(`היי ${me.display_name} ${me.avatar}`, body);
@@ -604,6 +777,7 @@ function render() {
   const views = admin ? ADMIN_VIEWS : KID_VIEWS;
   const tabs = admin ? ADMIN_TABS : KID_TABS;
   const pend = pendingReports().length + pendingRedemptions().length;
+  const keep = {}; document.querySelectorAll('#app input[id^="pr-"], #app input[id^="cr-"]').forEach(i => keep[i.id] = i.value);
   $('#app').innerHTML = `
     <header class="topbar"><div class="in">
       <div class="brand"><div class="logo">🏠</div><div><div class="brand-t">${esc(S.settings.family_name || 'מטלות הבית')}</div><div class="brand-s">${admin ? 'לוח מנהל' : 'הדף של ' + esc(S.me.display_name)}</div></div></div>
@@ -611,6 +785,8 @@ function render() {
     </div></header>
     <main class="shell">${views[S.tab]()}</main>
     <nav class="nav"><div class="in">${tabs.map(([k,ic,l]) => `<button class="${S.tab===k?'on':''}" data-act="tab" data-tab="${k}"><span class="ic">${ic}</span>${l}${admin && k==='approvals' && pend ? `<span class="badge">${pend}</span>` : ''}</button>`).join('')}</div></nav>`;
+  Object.entries(keep).forEach(([id, v]) => { const el = document.getElementById(id); if (el) el.value = v; });
+  loadPhotos();
 }
 
 const statusChip = s => s === 'approved' ? '<span class="chip ok">אושר ✓</span>' : s === 'rejected' ? '<span class="chip bad">נדחה</span>' : '<span class="chip warn">ממתין ⏳</span>';
@@ -627,7 +803,7 @@ function weeklyCard(kidId, interactive) {
   const reps = selReps(sel), left = c.times_per_week - reps.length;
   const dots = Array.from({length:c.times_per_week}, (_, i) => { const r = reps[i]; return `<span class="dot ${!r ? '' : r.status === 'approved' ? 'ok' : 'wait'}">${!r ? '' : r.status === 'approved' ? '✓' : '⏳'}</span>`; }).join('');
   return `<div class="card week">
-    <div class="week-top"><span class="chip">המטלה השבועית · ${fmtWeek(ws)}</span><span class="credit">⭐ ${c.credits}${c.times_per_week > 1 ? ' לכל ביצוע' : ''}</span></div>
+    <div class="week-top"><span class="chip">המטלה השבועית · ${fmtWeek(ws)}${c.photo_required ? ' · 📷' : ''}</span><span class="credit">⭐ ${c.credits}${c.times_per_week > 1 ? ' לכל ביצוע' : ''}</span></div>
     <div class="week-main"><div class="big-emoji">${esc(c.emoji)}</div><div><h3>${esc(c.title)}</h3>${c.description ? `<p class="muted small">${esc(c.description)}</p>` : ''}</div></div>
     <div class="dots">${dots}</div>
     ${interactive ? `<div class="week-foot">${left > 0
@@ -662,19 +838,45 @@ function kidHome() {
       </div>
     </div>
     ${weeklyCard(me.id, true)}
+    ${streakCard(me.id)}
+    ${(() => {
+      const mine = openTasks().filter(t => taskJoins(t.id).some(j => j.kid_id === me.id));
+      const free = openTasks().filter(t => !taskJoins(t.id).some(j => j.kid_id === me.id) && taskJoins(t.id).length < t.max_people && !taskClaim(t.id));
+      if (mine.length) return mine.map(t => taskItem(t, me.id)).join('');
+      return free.length ? `<div class="card row-between task"><div><b>⚡ ${free.length === 1 ? 'משימת בונוס פתוחה' : free.length + ' משימות בונוס פתוחות'}</b><div class="muted small">${esc(free[0].emoji || '')} ${esc(free[0].title)} · ⭐ ${free[0].credits}</div></div><button class="btn sm" data-act="tab" data-tab="chores">להצצה</button></div>` : '';
+    })()}
+    ${certAvailable() ? `<div class="card row-between" style="border:2px solid var(--gold)"><div><b>📜 תעודת הסיכום של ${HE_MONTHS[+monthKey().slice(5) - 1]} מוכנה!</b><div class="muted small">בואו לראות כמה הספקת החודש</div></div><button class="btn sm" data-act="cert" data-id="${me.id}" data-month="${monthKey()}">לתעודה</button></div>` : ''}
     ${goalCard(me.id)}
+    ${familyRewards().map(r => familyCard(r, true)).join('')}
     <div class="card row-between"><div class="row"><span style="font-size:26px">${S.push === 'on' && rem && rem.enabled ? '🔔' : '🔕'}</span><div><b>תזכורות</b><div class="muted small">${S.push === 'on' ? esc(remText) : 'ההתראות לא מופעלות במכשיר הזה'}</div></div></div><button class="btn sm ghost" data-act="reminders" data-id="${me.id}">הגדרה</button></div>
   </div>
   ${leaderboard(me.id)}
   <div class="section-t">פעילות אחרונה</div>
-  ${recent.length ? `<div class="list">${recent.map(r => `<div class="item"><div class="em">${r.kind==='bonus' ? (r.credits<0?'⚠️':'🎉') : esc(chore(r.chore_id)?.emoji || '✅')}</div><div class="body"><div class="title">${esc(r.title)}</div><div class="sub">${fmtDate(r.created_at)}${r.admin_note ? ' · ' + esc(r.admin_note) : ''}</div></div><div class="side"><span class="credit">${r.credits>0?'+':''}${r.credits}</span>${statusChip(r.status)}</div></div>`).join('')}</div>` : empty('🌱', 'עוד אין פעילות — בחרו מטלה והתחילו!')}`;
+  ${recent.length ? `<div class="list">${recent.map(r => `<div class="item"><div class="em">${repEmoji(r)}</div><div class="body"><div class="title">${esc(r.title)}</div><div class="sub">${fmtDate(r.created_at)}${r.admin_note ? ' · ' + esc(r.admin_note) : ''}</div></div><div class="side"><span class="credit">${r.credits>0?'+':''}${r.credits}</span>${statusChip(r.status)}</div></div>`).join('')}</div>` : empty('🌱', 'עוד אין פעילות — בחרו מטלה והתחילו!')}`;
+}
+
+function taskItem(t, kidId) {
+  const js = taskJoins(t.id), joined = js.some(j => j.kid_id === kidId), claim = taskClaim(t.id), full = js.length >= t.max_people;
+  const share = Math.floor(t.credits / Math.max(js.length + (joined || full ? 0 : 1), 1));
+  let btn;
+  if (claim) btn = `<span class="chip warn">⏳ ממתין לאישור</span>`;
+  else if (joined) btn = `<button class="btn sm" data-act="reportTask" data-id="${t.id}">✋ סיימנו!</button><button class="btn sm ghost" data-act="leaveTask" data-id="${t.id}">עזיבה</button>`;
+  else if (full) btn = `<button class="btn sm ghost" disabled>מלא</button>`;
+  else btn = `<button class="btn sm" data-act="joinTask" data-id="${t.id}">${js.length ? '🤝 הצטרפות' : '🙋 אני לוקח/ת'}</button>`;
+  return `<div class="item task ${joined ? 'mine' : ''}"><div class="em">${esc(t.emoji || '⚡')}</div><div class="body">
+    <div class="title">${esc(t.title)}</div>${t.description ? `<div class="sub">${esc(t.description)}</div>` : ''}
+    <div class="chips"><span class="chip gold">⭐ ${t.credits}${t.max_people > 1 ? ' לחלוקה' : ''}</span>${t.max_people > 1 ? `<span class="chip gray">👥 עד ${t.max_people} · ~${share} לכל אחד</span>` : ''}${t.deadline ? `<span class="chip gray">⏰ עד ${fmtDay(t.deadline)}</span>` : ''}${t.photo_required ? '<span class="chip gray">📷 עם תמונה</span>' : ''}</div>
+    ${t.max_people > 1 || js.length ? `<div class="ppl">${js.map(j => { const k = prof(j.kid_id); return k ? `<span class="avatar" style="--c:${k.color}" title="${esc(k.display_name)}">${esc(k.avatar)}</span>` : ''; }).join('')}${Array.from({ length: Math.max(0, t.max_people - js.length) }, () => '<span class="slot"></span>').join('')}</div>` : ''}
+  </div><div class="side">${btn}</div></div>`;
 }
 
 function kidChores() {
   const me = S.me, ws = weekStart(), sel = curSel(me.id);
   const locked = sel && selReps(sel).length > 0;
   const list = choresFor(me.id);
-  return `<h2>בחירת מטלה שבועית</h2>
+  const tasks = openTasks();
+  return `${tasks.length ? `<h2>⚡ משימות בונוס</h2><p class="muted" style="margin-bottom:12px">משימות חד-פעמיות מעבר למטלה השבועית. במשימה משותפת — הקרדיטים מתחלקים בין כל המשתתפים.</p><div class="list" style="margin-bottom:22px">${tasks.map(t => taskItem(t, me.id)).join('')}</div>` : ''}
+  <h2>בחירת מטלה שבועית</h2>
     <p class="muted" style="margin-bottom:14px">שבוע ${fmtWeek(ws)} · בוחרים מטלה אחת לשבוע. ${locked ? 'כבר דיווחת על המטלה שלך, אז השבוע אי אפשר להחליף.' : 'אפשר להחליף עד הדיווח הראשון.'}</p>
     ${list.length ? `<div class="list">${list.map(c => {
       const mine = sel && sel.chore_id === c.id;
@@ -687,16 +889,17 @@ function kidChores() {
       else btn = `<button class="btn sm" data-act="pick" data-id="${c.id}">${sel ? 'החלפה' : 'בחירה'}</button>`;
       return `<div class="item ${mine?'mine':''} ${taken&&!mine?'disabled':''}"><div class="em">${esc(c.emoji)}</div><div class="body">
         <div class="title">${esc(c.title)}</div>${c.description ? `<div class="sub">${esc(c.description)}</div>` : ''}
-        <div class="chips"><span class="chip gold">⭐ ${c.credits}${c.times_per_week>1?' × '+c.times_per_week:''}</span>${c.times_per_week>1?`<span class="chip gray">עד ${c.times_per_week} פעמים בשבוע</span>`:''}${c.exclusive?'<span class="chip gray">🔒 לילד אחד</span>':''}${others.length?`<span class="chip">${taken?'נבחרה ע״י':'גם'} ${others.map(o=>esc(o.display_name)).join(', ')}</span>`:''}</div>
+        <div class="chips"><span class="chip gold">⭐ ${c.credits}${c.times_per_week>1?' × '+c.times_per_week:''}</span>${c.times_per_week>1?`<span class="chip gray">עד ${c.times_per_week} פעמים בשבוע</span>`:''}${c.exclusive?'<span class="chip gray">🔒 לילד אחד</span>':''}${c.photo_required?'<span class="chip gray">📷 עם תמונה</span>':''}${others.length?`<span class="chip">${taken?'נבחרה ע״י':'גם'} ${others.map(o=>esc(o.display_name)).join(', ')}</span>`:''}</div>
       </div><div class="side">${btn}</div></div>`; }).join('')}</div>` : empty('📭', 'עדיין אין מטלות זמינות')}`;
 }
 
 function kidStore() {
   const me = S.me, st = storeInfo(), bal = balanceOf(me.id);
   const mine = S.redemptions.filter(r => r.kid_id === me.id).slice(0, 10);
-  const rewards = S.rewards.filter(r => r.active);
+  const rewards = S.rewards.filter(r => r.active && !r.shared);
   return `<div class="row-between" style="margin-bottom:12px"><h2>חנות הקרדיטים</h2><span class="chip gold" style="font-size:.95rem">יש לך ⭐ ${bal}</span></div>
-    <div class="banner ${st.open?'open':'closed'}"><span class="ic">${st.open?'🛍️':'⏰'}</span><div>${esc(st.text)}${st.open?'':'<div class="small" style="font-weight:400">בינתיים אפשר להסתכל ולתכנן 😉</div>'}</div></div>
+    ${familyRewards().length ? `<div class="stack" style="margin-bottom:14px">${familyRewards().map(r => familyCard(r)).join('')}</div>` : ''}
+    <div class="banner ${st.open?'open':'closed'}"><span class="ic">${st.open?'🛍️':'⏰'}</span><div>${esc(st.text)}${st.open?'':'<div class="small" style="font-weight:400">בינתיים אפשר להסתכל ולתכנן 😉 (לקופה המשפחתית אפשר לתרום תמיד)</div>'}</div></div>
     <div class="rewards" style="margin-top:14px">${rewards.map(r => {
       const out = r.stock !== null && r.stock <= 0;
       const can = st.open && !out && bal >= r.cost;
@@ -712,7 +915,8 @@ function kidStore() {
 
 function activityList(kidId, limit = 40) {
   const items = [
-    ...S.reports.filter(r => r.kid_id === kidId).map(r => ({t:r.created_at, html:`<div class="item"><div class="em">${r.kind==='bonus'?(r.credits<0?'⚠️':'🎉'):esc(chore(r.chore_id)?.emoji||'✅')}</div><div class="body"><div class="title">${esc(r.title)}</div><div class="sub">${fmtDate(r.created_at)}${r.note?' · "'+esc(r.note)+'"':''}${r.admin_note?' · '+esc(r.admin_note):''}</div></div><div class="side"><span class="credit">${r.credits>0?'+':''}${r.credits}</span>${statusChip(r.status)}</div></div>`})),
+    ...S.contribs.filter(c => c.kid_id === kidId).map(c => { const r = S.rewards.find(x => x.id === c.reward_id); return {t:c.created_at, html:`<div class="item"><div class="em">🤝</div><div class="body"><div class="title">תרומה לקופה: ${esc(r?.title || 'פרס משפחתי')}</div><div class="sub">${fmtDate(c.created_at)}</div></div><div class="side"><span class="credit">-${c.amount}</span></div></div>`}; }),
+    ...S.reports.filter(r => r.kid_id === kidId).map(r => ({t:r.created_at, html:`<div class="item"><div class="em">${repEmoji(r)}</div><div class="body"><div class="title">${esc(r.title)}</div><div class="sub">${fmtDate(r.created_at)}${r.note?' · "'+esc(r.note)+'"':''}${r.admin_note?' · '+esc(r.admin_note):''}</div></div><div class="side"><span class="credit">${r.credits>0?'+':''}${r.credits}</span>${statusChip(r.status)}</div></div>`})),
     ...S.redemptions.filter(r => r.kid_id === kidId).map(r => ({t:r.created_at, html:`<div class="item"><div class="em">${esc(r.emoji||'🎁')}</div><div class="body"><div class="title">🛍️ ${esc(r.title)}</div><div class="sub">${fmtDate(r.created_at)}${r.admin_note?' · '+esc(r.admin_note):''}</div></div><div class="side"><span class="credit">-${r.cost}</span>${statusChip(r.status)}</div></div>`})),
   ].sort((a,b) => b.t.localeCompare(a.t)).slice(0, limit);
   return items.length ? `<div class="list">${items.map(i => i.html).join('')}</div>` : empty('📭', 'אין עדיין פעילות');
@@ -721,7 +925,7 @@ function monthsTable(kidId) {
   return `<div class="card">${prevMonths(6).map(mk => `<div class="month-row"><span>${monthName(mk)}</span><span><span class="credit">+${monthEarned(kidId, mk)}</span> <span class="muted">· נוצלו ${monthSpent(kidId, mk)}</span></span></div>`).join('')}</div>`;
 }
 function kidHistory() {
-  return `<h2>ההיסטוריה שלי</h2><div class="section-t">סיכום חודשי</div>${monthsTable(S.me.id)}<div class="section-t">כל הפעילות</div>${activityList(S.me.id)}`;
+  return `<h2>ההיסטוריה שלי</h2><div class="section-t">📜 התעודות שלי</div><div class="card">${certButtons(S.me.id)}</div><div class="section-t">סיכום חודשי</div>${monthsTable(S.me.id)}<div class="section-t">כל הפעילות</div>${activityList(S.me.id)}`;
 }
 
 const KID_VIEWS = { home:kidHome, chores:kidChores, store:kidStore, history:kidHistory };
@@ -762,27 +966,44 @@ function pastWeeks() {
 
 function adminApprovals() {
   const reps = pendingReports(), reds = pendingRedemptions();
-  const reviewed = [...S.reports.filter(r => r.status !== 'pending' && r.kind === 'chore').map(r => ({...r, _t:'r'})), ...S.redemptions.filter(r => r.status !== 'pending').map(r => ({...r, _t:'d'}))]
+  const reviewed = [...S.reports.filter(r => r.status !== 'pending' && (r.kind === 'chore' || (r.kind === 'task' && r.reviewed_at))).map(r => ({...r, _t:'r'})), ...S.redemptions.filter(r => r.status !== 'pending').map(r => ({...r, _t:'d'}))]
     .sort((a,b) => (b.reviewed_at||b.created_at).localeCompare(a.reviewed_at||a.created_at)).slice(0, 15);
   const kidTag = id => { const k = prof(id); return k ? `<span class="avatar" style="--c:${k.color};width:34px;height:34px;font-size:18px">${esc(k.avatar)}</span>` : ''; };
   return `<div class="section-t" style="margin-top:4px"><span>דיווחי ביצוע (${reps.length})</span>${reps.length > 1 ? `<button class="btn sm ok" data-act="approveAll">אישור הכל</button>` : ''}</div>
-    ${reps.length ? `<div class="list">${reps.map(r => `<div class="appr"><div class="top">${kidTag(r.kid_id)}<div style="flex:1"><div style="font-weight:700">${esc(prof(r.kid_id)?.display_name)} · ${esc(chore(r.chore_id)?.emoji||'')} ${esc(r.title)}</div><div class="muted small">${fmtDate(r.created_at)}${r.week_start?' · שבוע '+fmtWeek(r.week_start):''}</div></div></div>
+    ${reps.length ? `<div class="list">${reps.map(r => {
+      const isTask = r.kind === 'task', js = isTask ? taskJoins(r.task_id) : [], n = Math.max(js.length, 1);
+      return `<div class="appr ${isTask ? 'task' : ''}"><div class="top">${kidTag(r.kid_id)}<div style="flex:1"><div style="font-weight:700">${esc(prof(r.kid_id)?.display_name)} · ${isTask ? '⚡ משימת בונוס: ' : esc(chore(r.chore_id)?.emoji||'') + ' '}${esc(r.title)}</div><div class="muted small">${fmtDate(r.created_at)}${r.week_start && !isTask ?' · שבוע '+fmtWeek(r.week_start):''}</div></div></div>
+      ${isTask ? `<div class="note">👥 ${js.map(j => esc(prof(j.kid_id)?.display_name || '')).join(', ')} · ${n > 1 ? `מתחלקים: ~${Math.floor(r.credits / n)} לכל אחד` : 'לבד'}</div>` : ''}
       ${r.note ? `<div class="note">💬 ${esc(r.note)}</div>` : ''}
-      <div class="acts"><span class="small muted">קרדיטים:</span><input class="mini" type="number" id="cr-${r.id}" value="${r.credits}"><span style="flex:1"></span><button class="btn sm soft-bad" data-act="rejectRep" data-id="${r.id}">✕ דחייה</button><button class="btn sm ok" data-act="approveRep" data-id="${r.id}">✓ אישור</button></div></div>`).join('')}</div>` : `<div class="card">${empty('✅', 'אין דיווחים שמחכים לאישור')}</div>`}
+      ${r.photo_path ? `<img class="appr-photo" data-photo="${esc(r.photo_path)}" data-act="viewPhoto" alt="תמונה מהדיווח">` : ''}
+      <div class="praise"><input class="input" id="pr-${r.id}" maxlength="140" placeholder="💬 חיזוק מילולי (לא חובה) — מגיע לילד עם האישור"><div class="praise-chips">${PRAISES.map(p => `<button type="button" class="chip-btn" data-act="praise" data-id="${r.id}" data-p="${esc(p)}">${p}</button>`).join('')}</div></div>
+      <div class="acts"><span class="small muted">${isTask ? 'סה״כ קרדיטים:' : 'קרדיטים:'}</span><input class="mini" type="number" id="cr-${r.id}" value="${r.credits}"><span style="flex:1"></span><button class="btn sm soft-bad" data-act="rejectRep" data-id="${r.id}">✕ דחייה</button><button class="btn sm ok" data-act="approveRep" data-id="${r.id}">✓ אישור</button></div></div>`; }).join('')}</div>` : `<div class="card">${empty('✅', 'אין דיווחים שמחכים לאישור')}</div>`}
     <div class="section-t">בקשות מהחנות (${reds.length})</div>
     ${reds.length ? `<div class="list">${reds.map(r => `<div class="appr"><div class="top">${kidTag(r.kid_id)}<div style="flex:1"><div style="font-weight:700">${esc(prof(r.kid_id)?.display_name)} · ${esc(r.emoji||'🎁')} ${esc(r.title)}</div><div class="muted small">${fmtDate(r.created_at)} · <span class="credit">⭐ ${r.cost}</span></div></div></div>
       <div class="acts"><span style="flex:1"></span><button class="btn sm soft-bad" data-act="rejectRed" data-id="${r.id}">✕ דחייה והחזרת קרדיטים</button><button class="btn sm ok" data-act="approveRed" data-id="${r.id}">🎁 נמסר</button></div></div>`).join('')}</div>` : `<div class="card">${empty('🛍️', 'אין בקשות פתוחות')}</div>`}
     <div class="section-t">טופלו לאחרונה</div>
-    ${reviewed.length ? `<div class="list">${reviewed.map(r => `<div class="item">${kidTag(r.kid_id)}<div class="body"><div class="title">${r._t==='d'?'🛍️ ':''}${esc(r.title)}</div><div class="sub">${esc(prof(r.kid_id)?.display_name)} · ${fmtDate(r.reviewed_at||r.created_at)}${r.admin_note?' · '+esc(r.admin_note):''}</div></div><div class="side"><span class="credit">${r._t==='d'?'-'+r.cost:'+'+r.credits}</span>${statusChip(r.status)}<button class="btn sm ghost" data-act="${r._t==='d'?'reopenRed':'reopenRep'}" data-id="${r.id}">↺ ביטול החלטה</button></div></div>`).join('')}</div>` : empty('🗂️', 'עוד לא טופלו בקשות')}`;
+    ${reviewed.length ? `<div class="list">${reviewed.map(r => `<div class="item">${kidTag(r.kid_id)}<div class="body"><div class="title">${r._t==='d'?'🛍️ ':''}${esc(r.title)}</div><div class="sub">${esc(prof(r.kid_id)?.display_name)} · ${fmtDate(r.reviewed_at||r.created_at)}${r.admin_note?' · '+esc(r.admin_note):''}</div></div><div class="side"><span class="credit">${r._t==='d'?'-'+r.cost:'+'+r.credits}</span>${statusChip(r.status)}${r.kind === 'task' ? '' : `<button class="btn sm ghost" data-act="${r._t==='d'?'reopenRed':'reopenRep'}" data-id="${r.id}">↺ ביטול החלטה</button>`}</div></div>`).join('')}</div>` : empty('🗂️', 'עוד לא טופלו בקשות')}`;
 }
 
 function adminChores() {
-  return `<div class="row-between" style="margin-bottom:12px"><h2>רשימת מטלות</h2><button class="btn sm" data-act="editChore">＋ מטלה חדשה</button></div>
+  const sugs = S.priceSugs || [];
+  const tasks = S.tasks.filter(t => t.status === 'open' || (t.done_at && Date.now() - new Date(t.done_at) < 14 * 864e5)).slice(0, 20);
+  return `${sugs.length ? `<div class="card" style="border:2px solid var(--gold);margin-bottom:18px"><b>💡 הצעות לייקר מטלות</b><div class="muted small" style="margin-bottom:6px">מטלות שאף אחד לא בחר 3 שבועות ומעלה. שום דבר לא משתנה בלי האישור שלך.</div>
+      ${sugs.map(g => `<div class="sug"><span style="font-size:24px">${esc(g.emoji || '🧹')}</span><div style="flex:1"><b>${esc(g.title)}</b><div class="muted small">${g.last_picked ? `נבחרה לאחרונה בשבוע ${fmtWeek(g.last_picked)}` : 'עוד לא נבחרה אף פעם'} · <span class="credit">${g.credits} → ${g.suggested}</span></div></div>
+        <button class="btn sm ok" data-act="sugOk" data-id="${g.chore_id}" data-v="${g.suggested}">ייקור</button><button class="btn sm ghost" data-act="sugLater" data-id="${g.chore_id}">לא עכשיו</button></div>`).join('')}</div>` : ''}
+    <div class="row-between" style="margin-bottom:12px"><h2>⚡ משימות בונוס</h2><button class="btn sm" data-act="editTask">＋ משימה חדשה</button></div>
+    ${tasks.length ? `<div class="list" style="margin-bottom:22px">${tasks.map(t => { const js = taskJoins(t.id), claim = taskClaim(t.id);
+      const stt = t.status === 'done' ? '<span class="chip ok">הושלמה ✓</span>' : taskExpired(t) ? '<span class="chip bad">פג תוקף</span>' : claim ? '<span class="chip warn">⏳ דווחה</span>' : `<span class="chip">${js.length}/${t.max_people} משתתפים</span>`;
+      return `<div class="item task ${t.status === 'done' ? 'disabled' : ''}"><div class="em">${esc(t.emoji || '⚡')}</div><div class="body"><div class="title">${esc(t.title)}</div>
+        <div class="chips"><span class="chip gold">⭐ ${t.credits}</span>${stt}${t.deadline ? `<span class="chip gray">⏰ ${fmtDay(t.deadline)}</span>` : ''}${t.photo_required ? '<span class="chip gray">📷</span>' : ''}</div>
+        ${js.length ? `<div class="ppl">${js.map(j => { const k = prof(j.kid_id); return k ? `<span class="avatar" style="--c:${k.color}">${esc(k.avatar)}</span>` : ''; }).join('')}</div>` : ''}</div>
+        <div class="side">${t.status === 'open' ? `<button class="btn sm ghost" data-act="editTask" data-id="${t.id}">עריכה</button>` : ''}</div></div>`; }).join('')}</div>` : `<div class="card" style="margin-bottom:22px">${empty('⚡', 'משימה חד-פעמית מעבר למטלה השבועית — למשל שטיפת רכב. אפשר לאפשר לכמה ילדים לעשות ביחד ולהתחלק בקרדיטים.')}</div>`}
+    <div class="row-between" style="margin-bottom:12px"><h2>רשימת מטלות</h2><button class="btn sm" data-act="editChore">＋ מטלה חדשה</button></div>
     ${S.chores.length ? `<div class="list">${S.chores.map(c => {
       const who = c.assigned_to && c.assigned_to.length ? c.assigned_to.map(id => prof(id)?.display_name).filter(Boolean).join(', ') : 'כל הילדים';
       const takers = S.selections.filter(s => s.chore_id === c.id && s.week_start === weekStart()).map(s => prof(s.kid_id)?.avatar).join(' ');
       return `<div class="item ${c.active?'':'disabled'}"><div class="em">${esc(c.emoji)}</div><div class="body"><div class="title">${esc(c.title)}</div>
-        <div class="chips"><span class="chip gold">⭐ ${c.credits}</span><span class="chip gray">${c.times_per_week}× בשבוע</span>${c.exclusive?'<span class="chip gray">🔒 לילד אחד</span>':''}<span class="chip gray">👥 ${esc(who)}</span>${!c.active?'<span class="chip bad">מושבתת</span>':''}${takers?`<span class="chip">השבוע: ${takers}</span>`:''}</div></div>
+        <div class="chips"><span class="chip gold">⭐ ${c.credits}</span><span class="chip gray">${c.times_per_week}× בשבוע</span>${c.exclusive?'<span class="chip gray">🔒 לילד אחד</span>':''}<span class="chip gray">👥 ${esc(who)}</span>${c.photo_required?'<span class="chip gray">📷 תמונה</span>':''}${!c.active?'<span class="chip bad">מושבתת</span>':''}${takers?`<span class="chip">השבוע: ${takers}</span>`:''}</div></div>
         <div class="side"><button class="btn sm ghost" data-act="editChore" data-id="${c.id}">עריכה</button></div></div>`; }).join('')}</div>` : `<div class="card">${empty('📋', 'עוד אין מטלות')}</div>`}`;
 }
 
@@ -790,8 +1011,9 @@ function adminStore() {
   const st = storeInfo();
   return `<div class="row-between" style="margin-bottom:12px"><h2>חנות הקרדיטים</h2><button class="btn sm" data-act="editReward">＋ פרס חדש</button></div>
     <div class="banner ${st.open?'open':'closed'}" style="margin-bottom:14px"><span class="ic">${st.open?'🛍️':'⏰'}</span><div>${esc(st.text)} <span class="small" style="font-weight:400">· משנים בלשונית ההגדרות</span></div></div>
+    ${familyRewards().length ? `<div class="stack" style="margin-bottom:14px">${familyRewards().map(r => { const pool = poolOf(r); return familyCard(r) + (pool ? `<div class="row" style="margin-top:-6px;justify-content:flex-end">${pool >= r.cost ? `<button class="btn sm ok" data-act="familyDone" data-id="${r.id}">🎉 הפרס מומש — קופה חדשה</button>` : ''}<button class="btn sm soft-bad" data-act="familyRefund" data-id="${r.id}">↺ החזרת הקרדיטים לילדים</button></div>` : ''); }).join('')}</div>` : ''}
     ${S.rewards.length ? `<div class="list">${S.rewards.map(r => `<div class="item ${r.active?'':'disabled'}"><div class="em">${esc(r.emoji)}</div><div class="body"><div class="title">${esc(r.title)}</div>
-      <div class="chips"><span class="chip gold">⭐ ${r.cost}</span><span class="chip gray">${r.stock===null?'ללא הגבלה':'במלאי: '+r.stock}</span>${!r.active?'<span class="chip bad">מוסתר</span>':''}</div></div>
+      <div class="chips"><span class="chip gold">⭐ ${r.cost}</span>${r.shared ? `<span class="chip">🏡 משפחתי · ${poolOf(r)}/${r.cost}</span>` : ''}<span class="chip gray">${r.stock===null?'ללא הגבלה':'במלאי: '+r.stock}</span>${!r.active?'<span class="chip bad">מוסתר</span>':''}</div></div>
       <div class="side"><button class="btn sm ghost" data-act="editReward" data-id="${r.id}">עריכה</button></div></div>`).join('')}</div>` : `<div class="card">${empty('🎁', 'עוד אין פרסים')}</div>`}`;
 }
 
@@ -811,13 +1033,14 @@ function adminSettings() {
         <div class="seg" id="modeSeg">${[['auto','אוטומטי'],['open','פתוחה'],['closed','סגורה']].map(([v,l]) => `<button type="button" data-v="${v}" class="${s.store_mode===v?'on':''}">${l}</button>`).join('')}</div>
         <input type="hidden" name="store_mode" value="${s.store_mode}">
         <span class="hint">אוטומטי = נפתחת בימים האחרונים של כל חודש. "פתוחה" / "סגורה" עוקפים את זה.</span></div>
-      <div class="field"><label>כמה ימים בסוף החודש החנות פתוחה (במצב אוטומטי)</label><input class="input" type="number" min="1" max="15" name="store_days" value="${s.store_days}" style="width:110px"></div>
+      <div class="field"><label>כמה ימים בסוף החודש החנות פתוחה (במצב אוטומטי)</label><input class="input" type="number" min="1" max="15" name="store_days" value="${s.store_days}" style="width:110px"><span class="hint">התעודה החודשית נשלחת לילדים בערב שלפני פתיחת החנות</span></div>
+      <div class="field"><label>🔥 בונוס רצף</label><div class="row" style="flex-wrap:wrap">כל <input class="input" type="number" min="2" max="12" name="streak_weeks" value="${s.streak_weeks ?? 4}" style="width:80px"> שבועות רצופים של מטלה שהושלמה = <input class="input" type="number" min="0" max="500" name="streak_bonus" value="${s.streak_bonus ?? 10}" style="width:90px"> קרדיטים</div><span class="hint">0 קרדיטים = בלי בונוס רצף. הבונוס נוסף אוטומטית ברגע שמאשרים את הביצוע שסוגר את הרצף.</span></div>
       <button class="btn" type="submit">שמירה</button>
     </form>
     <div class="section-t">🔔 התראות אליי</div>
     <div class="card">${pushBlock()}<p class="muted small">תקבל/י התראה על כל דיווח חדש ועל כל בקשה מהחנות. הילדים מקבלים התראה כשדיווח מאושר, על בונוס, כשהחנות נפתחת, ותזכורת לפי השעה שנקבעה (רק אם המטלה עוד לא בוצעה).</p></div>
     <div class="section-t">איך זה עובד</div>
-    <div class="card small muted" style="line-height:1.7">• כל ילד בוחר מטלה אחת לשבוע (ראשון–שבת) מתוך המטלות שמשויכות אליו.<br>• כל דיווח ביצוע מגיע אליך לאישור; רק אחרי אישור הקרדיטים נכנסים ליתרה.<br>• קרדיטים נצברים לאורך החודש, ובסוף החודש החנות נפתחת להמרה. יתרה שלא נוצלה ממשיכה לחודש הבא.<br>• קנייה בחנות מורידה קרדיטים מיד; אם דוחים — הקרדיטים חוזרים.</div>`;
+    <div class="card small muted" style="line-height:1.7">• כל ילד בוחר מטלה אחת לשבוע (ראשון–שבת) מתוך המטלות שמשויכות אליו.<br>• כל דיווח ביצוע מגיע אליך לאישור; רק אחרי אישור הקרדיטים נכנסים ליתרה.<br>• קרדיטים נצברים לאורך החודש, ובסוף החודש החנות נפתחת להמרה. יתרה שלא נוצלה ממשיכה לחודש הבא.<br>• קנייה בחנות מורידה קרדיטים מיד; אם דוחים — הקרדיטים חוזרים.<br>• פרס משפחתי: כל הילדים תורמים לקופה משותפת (בכל זמן). כשהקופה מלאה — מקבלים התראה.<br>• משימות בונוס: חד-פעמיות; במשימה משותפת הקרדיטים מתחלקים שווה בשווה.<br>• תמונות מדיווחים נמחקות אוטומטית אחרי אישור או דחייה.<br>• במוצאי שבת (20:00) מגיע אליך סיכום שבועי בהתראה.</div>`;
 }
 
 const ADMIN_VIEWS = { overview:adminOverview, approvals:adminApprovals, chores:adminChores, store:adminStore, kids:adminKids, settings:adminSettings };
@@ -921,12 +1144,91 @@ const ACT = {
   report() {
     const sel = curSel(S.me.id), c = sel && chore(sel.chore_id); if (!c) return;
     const m = openModal('דיווח ביצוע', `<div class="row" style="margin-bottom:14px"><div class="big-emoji">${esc(c.emoji)}</div><div><h3>${esc(c.title)}</h3><span class="credit">⭐ ${c.credits}</span> <span class="muted small">אחרי אישור</span></div></div>
-      <form id="repF"><div class="field"><label>רוצה לספר מה עשית? (לא חובה)</label><textarea class="input" name="note" maxlength="300" placeholder="למשל: פיניתי את המדיח וסידרתי גם את הסירים"></textarea></div><button class="btn big" type="submit">📨 שליחה לאישור</button></form>`);
-    m.querySelector('#repF').onsubmit = async ev => {
-      ev.preventDefault(); ev.target.querySelector('button').disabled = true;
-      const ok = await run(async () => must(await sb.from('ch_reports').insert({ kid_id: S.me.id, note: ev.target.note.value.trim() || null })), 'נשלח לאישור! 🙌');
-      if (ok) closeModal(); else ev.target.querySelector('button').disabled = false;
+      <form id="repF"><div class="field"><label>רוצה לספר מה עשית? (לא חובה)</label><textarea class="input" name="note" maxlength="300" placeholder="למשל: פיניתי את המדיח וסידרתי גם את הסירים"></textarea></div>${photoField(c.photo_required)}<button class="btn big" type="submit">📨 שליחה לאישור</button></form>`);
+    wirePhoto(m);
+    m.querySelector('#repF').onsubmit = ev => { ev.preventDefault(); submitReport(m, {}, c.photo_required, 'נשלח לאישור! 🙌'); };
+  },
+  reportTask(d) {
+    const t = S.tasks.find(x => x.id === d.id); if (!t) return;
+    const js = taskJoins(t.id);
+    const m = openModal('דיווח על משימת בונוס', `<div class="row" style="margin-bottom:14px"><div class="big-emoji">${esc(t.emoji || '⚡')}</div><div><h3>${esc(t.title)}</h3><span class="credit">⭐ ${t.credits}</span> <span class="muted small">${js.length > 1 ? `מתחלקים ${js.length}: ${js.map(j => esc(prof(j.kid_id)?.display_name || '')).join(', ')}` : 'אחרי אישור'}</span></div></div>
+      <form id="repF"><div class="field"><label>מה עשיתם? (לא חובה)</label><textarea class="input" name="note" maxlength="300"></textarea></div>${photoField(t.photo_required)}<button class="btn big" type="submit">📨 שליחה לאישור</button></form>`);
+    wirePhoto(m);
+    m.querySelector('#repF').onsubmit = ev => { ev.preventDefault(); submitReport(m, { kind: 'task', task_id: t.id }, t.photo_required, js.length > 1 ? 'נשלח לאישור בשם כולם! 🙌' : 'נשלח לאישור! 🙌'); };
+  },
+  async joinTask(d) {
+    const t = S.tasks.find(x => x.id === d.id);
+    await run(async () => must(await sb.from('ch_task_joins').insert({ task_id: d.id, kid_id: S.me.id })), t && t.max_people > 1 ? 'הצטרפת! 🤝' : 'המשימה שלך! 💪');
+  },
+  async leaveTask(d) {
+    if (!(await confirmBox('עזיבת משימה', 'לצאת מהמשימה? המקום יתפנה לאחרים.', 'יציאה', 'danger'))) return;
+    await run(async () => must(await sb.from('ch_task_joins').delete().eq('task_id', d.id).eq('kid_id', S.me.id)), 'יצאת מהמשימה');
+  },
+  contribute(d) {
+    const r = S.rewards.find(x => x.id === d.id), left = r.cost - poolOf(r), bal = balanceOf(S.me.id), max = Math.min(left, bal);
+    if (max <= 0) return toast(bal <= 0 ? 'אין לך כרגע קרדיטים לתרום' : 'הקופה כבר מלאה! 🎉', 'bad');
+    const quick = [5, 10, 20, 50].filter(v => v < max);
+    const m = openModal('🤝 תרומה לקופה המשפחתית', `${familyCard(r, true)}
+      <form id="ctF" style="margin-top:14px"><div class="field"><label>כמה קרדיטים לתרום? <span class="muted small">(יש לך ${bal}, חסרים לקופה ${left})</span></label>
+      <input class="input" type="number" name="v" min="1" max="${max}" value="${Math.min(10, max)}" required style="width:120px">
+      <div class="praise-chips">${quick.map(v => `<button type="button" class="chip-btn" data-v="${v}">${v}</button>`).join('')}<button type="button" class="chip-btn" data-v="${max}">${max === left ? `כל מה שחסר (${max})` : `הכל (${max})`}</button></div></div>
+      <p class="muted small">הקרדיטים יורדים מהיתרה שלך ונכנסים לקופה המשותפת.</p><button class="btn big" type="submit">🤝 תרומה</button></form>`);
+    m.querySelectorAll('[data-v]').forEach(b => b.onclick = () => m.querySelector('[name=v]').value = b.dataset.v);
+    m.querySelector('#ctF').onsubmit = async ev => {
+      ev.preventDefault(); const v = Math.min(max, Math.max(1, parseInt(ev.target.v.value, 10) || 0));
+      const ok = await run(async () => must(await sb.from('ch_contributions').insert({ reward_id: r.id, kid_id: S.me.id, amount: v })), `תרמת ${v} קרדיטים לקופה! 💜`);
+      if (ok) { closeModal(); if (v >= left) confetti(); }
     };
+  },
+  cert(d) {
+    const k = prof(d.id); if (!k) return;
+    openModal('📜 תעודה חודשית', certHtml(k.id, d.month || monthKey()) + `<div class="row-end"><button class="btn block" data-act="closeModal">${k.id === S.me.id ? 'יאללה! 🎉' : 'סגירה'}</button></div>`);
+    if (k.id === S.me.id) confetti();
+  },
+  viewPhoto(d, el) { if (el.src) openModal('📷 תמונה מהדיווח', `<img src="${el.src}" style="width:100%;border-radius:14px" alt="">`); },
+  praise(d) { const i = document.getElementById('pr-' + d.id); if (i) i.value = d.p; },
+  async sugOk(d) {
+    const c = chore(d.id);
+    if (!(await confirmBox('ייקור מטלה', `${esc(c.emoji)} ${esc(c.title)}: ${c.credits} → <b>${d.v}</b> קרדיטים לכל ביצוע?`, 'ייקור', 'ok'))) return;
+    await run(async () => must(await sb.from('ch_chores').update({ credits: +d.v, price_review_after: addDays(ilDate(), 21) }).eq('id', d.id)), 'המחיר עודכן ⭐');
+  },
+  async sugLater(d) { await run(async () => must(await sb.from('ch_chores').update({ price_review_after: addDays(ilDate(), 21) }).eq('id', d.id)), 'נזכיר שוב בעוד 3 שבועות'); },
+  editTask(d) {
+    const t = d.id ? S.tasks.find(x => x.id === d.id) : { title:'', description:'', emoji:'⚡', credits:20, max_people:1, deadline:null, photo_required:false, status:'open' };
+    const js = d.id ? taskJoins(t.id) : [];
+    const m = openModal(d.id ? 'עריכת משימת בונוס' : 'משימת בונוס חדשה', `<form id="tF">
+      <div class="field"><label>מה צריך לעשות?</label><input class="input" name="title" value="${esc(t.title)}" required maxlength="60" placeholder="למשל: שטיפת הרכב"></div>
+      <div class="field"><label>אייקון</label>${emojiPicker('emoji', t.emoji || '⚡', ['⚡','🚗','🧺','🪟','🌳','🛒','🧹','🍳','📦','🐶','🎄','🧽'])}</div>
+      <div class="field"><label>פירוט (לא חובה)</label><input class="input" name="description" value="${esc(t.description || '')}" maxlength="140"></div>
+      <div class="grid two"><div class="field"><label>קרדיטים (סה״כ)</label><input class="input" type="number" min="1" name="credits" value="${t.credits}" required></div>
+      <div class="field"><label>כמה ילדים יכולים להשתתף?</label><input class="input" type="number" min="1" max="10" name="max_people" value="${t.max_people}" required><span class="hint">יותר מ-1 = משימה משותפת, הקרדיטים מתחלקים</span></div></div>
+      <div class="field"><label>עד מתי? (לא חובה)</label><input class="input" type="date" name="deadline" value="${t.deadline || ''}" style="width:180px"></div>
+      <label class="check"><input type="checkbox" name="photo_required" ${t.photo_required ? 'checked' : ''}> חובה לצרף תמונה בדיווח</label>
+      ${js.length ? `<p class="muted small">משתתפים כרגע: ${js.map(j => esc(prof(j.kid_id)?.display_name || '')).join(', ')}</p>` : ''}
+      <div class="row-end">${d.id ? `<button type="button" class="btn soft-bad" id="closeT">סגירת המשימה</button>` : ''}<button class="btn" type="submit">${d.id ? 'שמירה' : 'פרסום לילדים 📣'}</button></div></form>`);
+    wirePickers(m);
+    m.querySelector('#tF').onsubmit = async ev => {
+      ev.preventDefault(); const f = ev.target;
+      const row = { title: f.title.value.trim(), emoji: f.emoji.value.trim() || '⚡', description: f.description.value.trim() || null, credits: +f.credits.value, max_people: +f.max_people.value, deadline: f.deadline.value || null, photo_required: f.photo_required.checked };
+      const ok = await run(async () => must(d.id ? await sb.from('ch_tasks').update(row).eq('id', d.id) : await sb.from('ch_tasks').insert(row)), d.id ? 'נשמר' : 'המשימה פורסמה — הילדים קיבלו התראה 📣');
+      if (ok) closeModal();
+    };
+    const cl = m.querySelector('#closeT');
+    if (cl) cl.onclick = async () => {
+      if (taskClaim(t.id)) return toast('יש דיווח שממתין לאישור — קודם לאשר או לדחות אותו', 'bad');
+      if (!(await confirmBox('סגירת משימה', 'לסגור את המשימה? היא תיעלם מהילדים.', 'סגירה', 'danger'))) return;
+      await run(async () => must(await sb.from('ch_tasks').update({ status: 'closed' }).eq('id', t.id)), 'המשימה נסגרה');
+    };
+  },
+  async familyDone(d) {
+    const r = S.rewards.find(x => x.id === d.id);
+    if (!(await confirmBox('מימוש פרס משפחתי', `${esc(r.emoji)} ${esc(r.title)} מומש? הקופה תתאפס ותתחיל מחדש${r.stock !== null ? ' (והמלאי יירד באחד)' : ''}.`, 'כן, מומש 🎉', 'ok'))) return;
+    await run(async () => must(await sb.from('ch_rewards').update({ shared_round: r.shared_round + 1, stock: r.stock === null ? null : Math.max(0, r.stock - 1) }).eq('id', r.id)), 'מזל טוב! הקופה התחילה מחדש 🎉');
+  },
+  async familyRefund(d) {
+    const r = S.rewards.find(x => x.id === d.id);
+    if (!(await confirmBox('החזרת קרדיטים', `להחזיר לכל ילד את מה שתרם לקופה של "${esc(r.title)}" (${poolOf(r)} קרדיטים)?`, 'החזרה', 'danger'))) return;
+    await run(async () => must(await sb.from('ch_contributions').delete().eq('reward_id', r.id).eq('round', r.shared_round)), 'הקרדיטים הוחזרו');
   },
   async buy(d) {
     const r = S.rewards.find(x => x.id === d.id);
@@ -939,16 +1241,18 @@ const ACT = {
   },
 
   /* ----- מנהל: אישורים ----- */
-  async approveRep(d) {
-    const v = parseInt($('#cr-' + d.id)?.value, 10);
-    await run(async () => must(await sb.from('ch_reports').update({ status:'approved', credits: isNaN(v) ? undefined : v, reviewed_at: new Date().toISOString() }).eq('id', d.id)), 'אושר ✓');
-  },
+  async approveRep(d) { await run(() => approveOne(S.reports.find(r => r.id === d.id)), 'אושר ✓'); },
   async approveAll() {
     const reps = pendingReports();
     if (!(await confirmBox('אישור הכל', `לאשר ${reps.length} דיווחים?`, 'אישור הכל', 'ok'))) return;
-    await run(async () => { for (const r of reps) { const v = parseInt($('#cr-' + r.id)?.value, 10); must(await sb.from('ch_reports').update({ status:'approved', credits: isNaN(v) ? r.credits : v, reviewed_at: new Date().toISOString() }).eq('id', r.id)); } }, 'כולם אושרו ✓');
+    await run(async () => { for (const r of reps) await approveOne(r); }, 'כולם אושרו ✓');
   },
-  rejectRep(d) { reasonModal('דחיית דיווח', 'למשל: הכלים עוד היו בכיור', async note => must(await sb.from('ch_reports').update({ status:'rejected', admin_note: note, reviewed_at: new Date().toISOString() }).eq('id', d.id)), 'הדיווח נדחה'); },
+  rejectRep(d) {
+    const r = S.reports.find(x => x.id === d.id);
+    reasonModal('דחיית דיווח', 'למשל: הכלים עוד היו בכיור', async note => must(r && r.kind === 'task'
+      ? await sb.rpc('ch_review_task', { p_report: d.id, p_approve: false, p_note: note, p_total: null })
+      : await sb.from('ch_reports').update({ status:'rejected', admin_note: note, reviewed_at: new Date().toISOString() }).eq('id', d.id)), 'הדיווח נדחה');
+  },
   async approveRed(d) { await run(async () => must(await sb.from('ch_redemptions').update({ status:'approved', reviewed_at: new Date().toISOString() }).eq('id', d.id)), 'סומן כנמסר 🎁'); },
   rejectRed(d) { reasonModal('דחיית בקשה', 'הקרדיטים יחזרו לילד', async note => must(await sb.from('ch_redemptions').update({ status:'rejected', admin_note: note, reviewed_at: new Date().toISOString() }).eq('id', d.id)), 'נדחה, הקרדיטים הוחזרו'); },
   async reopenRep(d) {
@@ -974,7 +1278,7 @@ const ACT = {
   },
   kidHist(d) {
     const k = prof(d.id);
-    openModal(`${k.avatar} ${k.display_name}`, `<div class="row" style="gap:16px;margin-bottom:6px"><span class="chip gold" style="font-size:.95rem">יתרה ⭐ ${balanceOf(k.id)}</span></div><div class="section-t">סיכום חודשי</div>${monthsTable(k.id)}<div class="section-t">פעילות</div>${activityList(k.id, 60)}`);
+    openModal(`${k.avatar} ${k.display_name}`, `<div class="row" style="gap:16px;margin-bottom:6px"><span class="chip gold" style="font-size:.95rem">יתרה ⭐ ${balanceOf(k.id)}</span></div>${streakCard(k.id)}<div class="section-t">📜 תעודות</div>${certButtons(k.id)}<div class="section-t">סיכום חודשי</div>${monthsTable(k.id)}<div class="section-t">פעילות</div>${activityList(k.id, 60)}`);
   },
   /* ----- מנהל: מטלות ----- */
   editChore(d) {
@@ -987,6 +1291,7 @@ const ACT = {
       <div class="grid two"><div class="field"><label>קרדיטים לכל ביצוע</label><input class="input" type="number" min="0" name="credits" value="${c.credits}" required></div>
       <div class="field"><label>כמה פעמים בשבוע</label><input class="input" type="number" min="1" max="14" name="times_per_week" value="${c.times_per_week}" required></div></div>
       <label class="check"><input type="checkbox" name="exclusive" ${c.exclusive?'checked':''}> רק ילד אחד יכול לבחור אותה בכל שבוע</label>
+      <label class="check"><input type="checkbox" name="photo_required" ${c.photo_required?'checked':''}> 📷 חובה לצרף תמונה לכל דיווח</label>
       <div class="field" style="margin-top:8px"><label>למי המטלה מתאימה?</label><span class="hint">אם לא מסמנים אף אחד — לכל הילדים</span>
         ${ks.map(k => `<label class="check"><input type="checkbox" name="kid" value="${k.id}" ${asg.includes(k.id)?'checked':''}> ${esc(k.avatar)} ${esc(k.display_name)}</label>`).join('') || '<span class="muted small">עוד אין ילדים</span>'}</div>
       <label class="check"><input type="checkbox" name="active" ${c.active?'checked':''}> פעילה (מוצגת לילדים)</label>
@@ -995,7 +1300,7 @@ const ACT = {
     m.querySelector('#cF').onsubmit = async ev => {
       ev.preventDefault(); const f = ev.target;
       const sel = [...f.querySelectorAll('[name=kid]:checked')].map(x => x.value);
-      const row = { title: f.title.value.trim(), emoji: f.emoji.value.trim() || '🧹', description: f.description.value.trim() || null, credits: +f.credits.value, times_per_week: +f.times_per_week.value, exclusive: f.exclusive.checked, assigned_to: sel.length ? sel : null, active: f.active.checked };
+      const row = { title: f.title.value.trim(), emoji: f.emoji.value.trim() || '🧹', description: f.description.value.trim() || null, credits: +f.credits.value, times_per_week: +f.times_per_week.value, exclusive: f.exclusive.checked, assigned_to: sel.length ? sel : null, active: f.active.checked, ...('streak_weeks' in S.settings ? { photo_required: f.photo_required.checked } : {}) };
       const ok = await run(async () => must(d.id ? await sb.from('ch_chores').update(row).eq('id', d.id) : await sb.from('ch_chores').insert(row)), 'נשמר');
       if (ok) closeModal();
     };
@@ -1015,12 +1320,13 @@ const ACT = {
       <div class="field"><label>תיאור (לא חובה)</label><input class="input" name="description" value="${esc(r.description||'')}" maxlength="140"></div>
       <div class="grid two"><div class="field"><label>מחיר בקרדיטים</label><input class="input" type="number" min="1" name="cost" value="${r.cost}" required></div>
       <div class="field"><label>מלאי</label><input class="input" type="number" min="0" name="stock" value="${r.stock ?? ''}" placeholder="ללא הגבלה"></div></div>
+      <label class="check"><input type="checkbox" name="shared" ${r.shared?'checked':''}> 🏡 פרס משפחתי — כל הילדים חוסכים ביחד לקופה משותפת</label>
       <label class="check"><input type="checkbox" name="active" ${r.active?'checked':''}> מוצג בחנות</label>
       <div class="row-end">${d.id ? `<button type="button" class="btn soft-bad" id="del">מחיקה</button>` : ''}<button class="btn" type="submit">שמירה</button></div></form>`);
     wirePickers(m);
     m.querySelector('#rF').onsubmit = async ev => {
       ev.preventDefault(); const f = ev.target;
-      const row = { title: f.title.value.trim(), emoji: f.emoji.value.trim() || '🎁', description: f.description.value.trim() || null, cost: +f.cost.value, stock: f.stock.value === '' ? null : +f.stock.value, active: f.active.checked };
+      const row = { title: f.title.value.trim(), emoji: f.emoji.value.trim() || '🎁', description: f.description.value.trim() || null, cost: +f.cost.value, stock: f.stock.value === '' ? null : +f.stock.value, active: f.active.checked, ...('streak_weeks' in S.settings ? { shared: f.shared.checked } : {}) };
       const ok = await run(async () => must(d.id ? await sb.from('ch_rewards').update(row).eq('id', d.id) : await sb.from('ch_rewards').insert(row)), 'נשמר');
       if (ok) closeModal();
     };
@@ -1077,6 +1383,12 @@ const ACT = {
   },
 };
 
+async function approveOne(r) {
+  if (!r) return;
+  const v = parseInt($('#cr-' + r.id)?.value, 10), note = ($('#pr-' + r.id)?.value || '').trim() || null;
+  if (r.kind === 'task') return must(await sb.rpc('ch_review_task', { p_report: r.id, p_approve: true, p_note: note, p_total: isNaN(v) ? r.credits : v }));
+  must(await sb.from('ch_reports').update({ status:'approved', credits: isNaN(v) ? r.credits : v, admin_note: note, reviewed_at: new Date().toISOString() }).eq('id', r.id));
+}
 function reasonModal(title, placeholder, fn, okMsg) {
   const m = openModal(title, `<form id="rsF"><div class="field"><label>הסבר לילד (לא חובה)</label><input class="input" name="n" maxlength="140" placeholder="${esc(placeholder)}"></div><button class="btn danger big" type="submit">דחייה</button></form>`);
   m.querySelector('#rsF').onsubmit = async ev => { ev.preventDefault(); const ok = await run(() => fn(ev.target.n.value.trim() || null), okMsg); if (ok) closeModal(); };
@@ -1088,7 +1400,7 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('submit', e => {
   if (e.target.id !== 'setF') return; e.preventDefault(); const f = e.target;
-  run(async () => must(await sb.from('ch_settings').update({ family_name: f.family_name.value.trim() || 'מטלות הבית', store_mode: f.store_mode.value, store_days: Math.min(15, Math.max(1, +f.store_days.value || 3)) }).eq('id', 1)), 'ההגדרות נשמרו');
+  run(async () => must(await sb.from('ch_settings').update({ family_name: f.family_name.value.trim() || 'מטלות הבית', store_mode: f.store_mode.value, store_days: Math.min(15, Math.max(1, +f.store_days.value || 3)), ...('streak_weeks' in S.settings ? { streak_weeks: Math.min(12, Math.max(2, +f.streak_weeks.value || 4)), streak_bonus: Math.min(500, Math.max(0, +f.streak_bonus.value || 0)) } : {}) }).eq('id', 1)), 'ההגדרות נשמרו');
 });
 document.addEventListener('click', e => {
   const b = e.target.closest('#modeSeg button'); if (!b) return;
