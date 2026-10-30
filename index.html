@@ -251,6 +251,8 @@ textarea.input{min-height:80px;resize:vertical}
 .ppl .avatar{width:26px;height:26px;font-size:14px;border-width:1.5px}
 .slot{width:26px;height:26px;border-radius:50%;border:1.5px dashed #cfc9ee}
 .photo-pick{display:block;cursor:pointer}
+.photo-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.photo-btns .photo-box{cursor:pointer}
 .photo-box{display:flex;align-items:center;justify-content:center;gap:6px;padding:14px;border:2px dashed var(--line);border-radius:14px;color:var(--primary);font-weight:600;background:#faf9ff}
 .photo-prev{display:block;max-width:100%;max-height:220px;margin:8px auto 0;border-radius:12px}
 .appr-photo{display:block;width:100%;max-height:220px;object-fit:cover;border-radius:12px;margin-top:10px;background:var(--bg);cursor:zoom-in;min-height:60px}
@@ -571,15 +573,18 @@ async function uploadPhoto(file) {
 }
 function photoField(required) {
   return `<div class="field"><label>📷 תמונה ${required ? '<span style="color:var(--bad)">(חובה במטלה הזו)</span>' : '(לא חובה)'}</label>
-    <label class="photo-pick"><input type="file" name="photo" accept="image/*" hidden><span class="photo-box">📷 צילום או בחירת תמונה</span><img class="photo-prev" hidden alt=""></label>
+    <div class="photo-btns"><label class="photo-box"><input type="file" data-photo-in accept="image/*" capture="environment" hidden>📷 צילום עכשיו</label><label class="photo-box"><input type="file" data-photo-in accept="image/*" hidden>🖼️ מהגלריה</label></div>
+    <img class="photo-prev" hidden alt="">
     <span class="hint">התמונה נמחקת אוטומטית אחרי שהדיווח מאושר</span></div>`;
 }
 function wirePhoto(m) {
-  const inp = m.querySelector('[name=photo]'); if (!inp) return;
-  inp.onchange = () => { const f = inp.files[0], img = m.querySelector('.photo-prev'); if (!f) return; img.src = URL.createObjectURL(f); img.hidden = false; m.querySelector('.photo-box').textContent = '🔄 החלפת תמונה'; };
+  m.querySelectorAll('[data-photo-in]').forEach(inp => inp.onchange = () => {
+    const f = inp.files[0], img = m.querySelector('.photo-prev'); if (!f) return;
+    m._photo = f; img.src = URL.createObjectURL(f); img.hidden = false;
+  });
 }
 async function submitReport(m, base, required, okMsg) {
-  const f = m.querySelector('form'), btn = f.querySelector('[type=submit]'), file = f.photo && f.photo.files[0];
+  const f = m.querySelector('form'), btn = f.querySelector('[type=submit]'), file = m._photo || null;
   if (required && !file) return toast('צריך לצרף תמונה 📷', 'bad');
   btn.disabled = true; btn.textContent = file ? 'מעלה תמונה…' : 'שולח…';
   const ok = await run(async () => {
@@ -973,7 +978,7 @@ function adminApprovals() {
     ${reps.length ? `<div class="list">${reps.map(r => {
       const isTask = r.kind === 'task', js = isTask ? taskJoins(r.task_id) : [], n = Math.max(js.length, 1);
       return `<div class="appr ${isTask ? 'task' : ''}"><div class="top">${kidTag(r.kid_id)}<div style="flex:1"><div style="font-weight:700">${esc(prof(r.kid_id)?.display_name)} · ${isTask ? '⚡ משימת בונוס: ' : esc(chore(r.chore_id)?.emoji||'') + ' '}${esc(r.title)}</div><div class="muted small">${fmtDate(r.created_at)}${r.week_start && !isTask ?' · שבוע '+fmtWeek(r.week_start):''}</div></div></div>
-      ${isTask ? `<div class="note">👥 ${js.map(j => esc(prof(j.kid_id)?.display_name || '')).join(', ')} · ${n > 1 ? `מתחלקים: ~${Math.floor(r.credits / n)} לכל אחד` : 'לבד'}</div>` : ''}
+      ${isTask ? `<div class="note row-between"><span>👥 ${js.map(j => esc(prof(j.kid_id)?.display_name || '')).join(', ') || 'אין משתתפים'} · ${n > 1 ? `מתחלקים: ~${Math.floor(r.credits / n)} לכל אחד` : 'לבד'}</span><button class="btn sm ghost" data-act="editTask" data-id="${r.task_id}">✏️ תיקון משתתפים</button></div>` : ''}
       ${r.note ? `<div class="note">💬 ${esc(r.note)}</div>` : ''}
       ${r.photo_path ? `<img class="appr-photo" data-photo="${esc(r.photo_path)}" data-act="viewPhoto" alt="תמונה מהדיווח">` : ''}
       <div class="praise"><input class="input" id="pr-${r.id}" maxlength="140" placeholder="💬 חיזוק מילולי (לא חובה) — מגיע לילד עם האישור"><div class="praise-chips">${PRAISES.map(p => `<button type="button" class="chip-btn" data-act="praise" data-id="${r.id}" data-p="${esc(p)}">${p}</button>`).join('')}</div></div>
@@ -1039,6 +1044,7 @@ function adminSettings() {
     </form>
     <div class="section-t">🔔 התראות אליי</div>
     <div class="card">${pushBlock()}<p class="muted small">תקבל/י התראה על כל דיווח חדש ועל כל בקשה מהחנות. הילדים מקבלים התראה כשדיווח מאושר, על בונוס, כשהחנות נפתחת, ותזכורת לפי השעה שנקבעה (רק אם המטלה עוד לא בוצעה).</p></div>
+    <p class="muted small" style="text-align:center;margin-top:18px">גרסה 4 · 30.10 (תיקון משתתפים)</p>
     <div class="section-t">איך זה עובד</div>
     <div class="card small muted" style="line-height:1.7">• כל ילד בוחר מטלה אחת לשבוע (ראשון–שבת) מתוך המטלות שמשויכות אליו.<br>• כל דיווח ביצוע מגיע אליך לאישור; רק אחרי אישור הקרדיטים נכנסים ליתרה.<br>• קרדיטים נצברים לאורך החודש, ובסוף החודש החנות נפתחת להמרה. יתרה שלא נוצלה ממשיכה לחודש הבא.<br>• קנייה בחנות מורידה קרדיטים מיד; אם דוחים — הקרדיטים חוזרים.<br>• פרס משפחתי: כל הילדים תורמים לקופה משותפת (בכל זמן). כשהקופה מלאה — מקבלים התראה.<br>• משימות בונוס: חד-פעמיות; במשימה משותפת הקרדיטים מתחלקים שווה בשווה.<br>• תמונות מדיווחים נמחקות אוטומטית אחרי אישור או דחייה.<br>• במוצאי שבת (20:00) מגיע אליך סיכום שבועי בהתראה.</div>`;
 }
@@ -1126,7 +1132,7 @@ const ACT = {
     const me = S.me;
     const m = openModal('החשבון שלי', `<div class="row" style="margin-bottom:16px"><span class="avatar lg" style="--c:${me.color}">${esc(me.avatar)}</span><div><h3>${esc(me.display_name)}</h3><div class="muted small" dir="ltr" style="text-align:right">@${esc(me.username)}</div></div></div>
       <form id="pwF"><div class="field"><label>שינוי סיסמה</label><input class="input" name="p" type="password" minlength="6" dir="ltr" placeholder="סיסמה חדשה" required></div><button class="btn ghost block" type="submit">עדכון סיסמה</button></form>
-      <div class="row-end"><button class="btn danger block" id="lo">יציאה מהחשבון</button></div>`);
+      <div class="row-end"><button class="btn danger block" id="lo">יציאה מהחשבון</button></div><p class="muted small" style="text-align:center;margin-top:10px">גרסה 4 · 30.10</p>`);
     m.querySelector('#lo').onclick = logout;
     m.querySelector('#pwF').onsubmit = async ev => { ev.preventDefault(); const { error } = await sb.auth.updateUser({ password: ev.target.p.value }); if (error) return toast(errMsg(error), 'bad'); closeModal(); toast('הסיסמה עודכנה', 'ok'); };
   },
@@ -1144,7 +1150,7 @@ const ACT = {
   report() {
     const sel = curSel(S.me.id), c = sel && chore(sel.chore_id); if (!c) return;
     const m = openModal('דיווח ביצוע', `<div class="row" style="margin-bottom:14px"><div class="big-emoji">${esc(c.emoji)}</div><div><h3>${esc(c.title)}</h3><span class="credit">⭐ ${c.credits}</span> <span class="muted small">אחרי אישור</span></div></div>
-      <form id="repF"><div class="field"><label>רוצה לספר מה עשית? (לא חובה)</label><textarea class="input" name="note" maxlength="300" placeholder="למשל: פיניתי את המדיח וסידרתי גם את הסירים"></textarea></div>${photoField(c.photo_required)}<button class="btn big" type="submit">📨 שליחה לאישור</button></form>`);
+      <form id="repF"><div class="field"><label>רוצה לספר מה עשית? (לא חובה)</label><textarea class="input" name="note" maxlength="300" lang="he" dir="auto" autocapitalize="sentences" spellcheck="true" placeholder="למשל: פיניתי את המדיח וסידרתי גם את הסירים"></textarea></div>${photoField(c.photo_required)}<button class="btn big" type="submit">📨 שליחה לאישור</button></form>`);
     wirePhoto(m);
     m.querySelector('#repF').onsubmit = ev => { ev.preventDefault(); submitReport(m, {}, c.photo_required, 'נשלח לאישור! 🙌'); };
   },
@@ -1152,7 +1158,7 @@ const ACT = {
     const t = S.tasks.find(x => x.id === d.id); if (!t) return;
     const js = taskJoins(t.id);
     const m = openModal('דיווח על משימת בונוס', `<div class="row" style="margin-bottom:14px"><div class="big-emoji">${esc(t.emoji || '⚡')}</div><div><h3>${esc(t.title)}</h3><span class="credit">⭐ ${t.credits}</span> <span class="muted small">${js.length > 1 ? `מתחלקים ${js.length}: ${js.map(j => esc(prof(j.kid_id)?.display_name || '')).join(', ')}` : 'אחרי אישור'}</span></div></div>
-      <form id="repF"><div class="field"><label>מה עשיתם? (לא חובה)</label><textarea class="input" name="note" maxlength="300"></textarea></div>${photoField(t.photo_required)}<button class="btn big" type="submit">📨 שליחה לאישור</button></form>`);
+      <form id="repF"><div class="field"><label>מה עשיתם? (לא חובה)</label><textarea class="input" name="note" maxlength="300" lang="he" dir="auto" autocapitalize="sentences" spellcheck="true"></textarea></div>${photoField(t.photo_required)}<button class="btn big" type="submit">📨 שליחה לאישור</button></form>`);
     wirePhoto(m);
     m.querySelector('#repF').onsubmit = ev => { ev.preventDefault(); submitReport(m, { kind: 'task', task_id: t.id }, t.photo_required, js.length > 1 ? 'נשלח לאישור בשם כולם! 🙌' : 'נשלח לאישור! 🙌'); };
   },
@@ -1204,13 +1210,24 @@ const ACT = {
       <div class="field"><label>כמה ילדים יכולים להשתתף?</label><input class="input" type="number" min="1" max="10" name="max_people" value="${t.max_people}" required><span class="hint">יותר מ-1 = משימה משותפת, הקרדיטים מתחלקים</span></div></div>
       <div class="field"><label>עד מתי? (לא חובה)</label><input class="input" type="date" name="deadline" value="${t.deadline || ''}" style="width:180px"></div>
       <label class="check"><input type="checkbox" name="photo_required" ${t.photo_required ? 'checked' : ''}> חובה לצרף תמונה בדיווח</label>
-      ${js.length ? `<p class="muted small">משתתפים כרגע: ${js.map(j => esc(prof(j.kid_id)?.display_name || '')).join(', ')}</p>` : ''}
+      ${d.id ? `<div class="field" style="margin-top:8px"><label>👥 משתתפים</label><span class="hint">תיקון ידני — אפשר להוסיף או להסיר ילדים גם אחרי שדווח. הקרדיטים יתחלקו לפי הרשימה הזו באישור.</span>
+        ${kids().map(k => `<label class="check"><input type="checkbox" name="ppl" value="${k.id}" ${js.some(j => j.kid_id === k.id) ? 'checked' : ''}> ${esc(k.avatar)} ${esc(k.display_name)}</label>`).join('')}</div>` : ''}
       <div class="row-end">${d.id ? `<button type="button" class="btn soft-bad" id="closeT">סגירת המשימה</button>` : ''}<button class="btn" type="submit">${d.id ? 'שמירה' : 'פרסום לילדים 📣'}</button></div></form>`);
     wirePickers(m);
     m.querySelector('#tF').onsubmit = async ev => {
       ev.preventDefault(); const f = ev.target;
       const row = { title: f.title.value.trim(), emoji: f.emoji.value.trim() || '⚡', description: f.description.value.trim() || null, credits: +f.credits.value, max_people: +f.max_people.value, deadline: f.deadline.value || null, photo_required: f.photo_required.checked };
-      const ok = await run(async () => must(d.id ? await sb.from('ch_tasks').update(row).eq('id', d.id) : await sb.from('ch_tasks').insert(row)), d.id ? 'נשמר' : 'המשימה פורסמה — הילדים קיבלו התראה 📣');
+      const want = d.id ? [...f.querySelectorAll('[name=ppl]:checked')].map(x => x.value) : null;
+      if (want && taskClaim(t.id) && !want.length) return toast('יש דיווח שממתין — צריך להשאיר לפחות משתתף אחד', 'bad');
+      if (want && want.length > row.max_people) row.max_people = want.length;
+      const ok = await run(async () => {
+        must(d.id ? await sb.from('ch_tasks').update(row).eq('id', d.id) : await sb.from('ch_tasks').insert(row));
+        if (want) {
+          const have = js.map(j => j.kid_id);
+          for (const id of have.filter(x => !want.includes(x))) must(await sb.from('ch_task_joins').delete().eq('task_id', t.id).eq('kid_id', id));
+          for (const id of want.filter(x => !have.includes(x))) must(await sb.from('ch_task_joins').insert({ task_id: t.id, kid_id: id }));
+        }
+      }, d.id ? 'נשמר' : 'המשימה פורסמה — הילדים קיבלו התראה 📣');
       if (ok) closeModal();
     };
     const cl = m.querySelector('#closeT');
