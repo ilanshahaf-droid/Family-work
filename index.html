@@ -470,9 +470,13 @@ function pushBlock(full = true) {
 const adminName = () => S.profiles.find(p => p.role === 'admin')?.display_name || 'ההורה';
 const daysLeftInWeek = () => 6 - new Date(ilDate() + 'T00:00:00Z').getUTCDay();
 const daysLeftText = () => { const d = daysLeftInWeek(); return d === 0 ? 'היום היום האחרון בשבוע!' : d === 1 ? 'נשאר רק עוד יום אחד בשבוע' : `נשארו ${d} ימים עד סוף השבוע`; };
-function weekDone(kid, ws) {
-  const s = curSel(kid, ws), c = s && chore(s.chore_id);
+function weekDoneAuto(s) {
+  const c = s && chore(s.chore_id);
   return !!c && S.reports.filter(r => r.selection_id === s.id && r.status === 'approved').length >= c.times_per_week;
+}
+function weekDone(kid, ws) {
+  const s = curSel(kid, ws); if (!s) return false;
+  return s.done_override === true || s.done_override === false ? s.done_override : weekDoneAuto(s);
 }
 function streak(kid) {
   let n = 0, w = weekStart();
@@ -980,8 +984,8 @@ function pastWeeks() {
   const weeks = [1,2,3,4].map(i => addDays(weekStart(), -7*i));
   return `<div class="section-t">שבועות קודמים</div><div class="card" style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.88rem">
     <tr><th style="text-align:right;padding:6px">שבוע</th>${ks.map(k => `<th style="padding:6px">${esc(k.avatar)} ${esc(k.display_name)}</th>`).join('')}</tr>
-    ${weeks.map(w => `<tr style="border-top:1px solid var(--line)"><td style="padding:8px 6px;white-space:nowrap">${fmtWeek(w)}</td>${ks.map(k => { const s = curSel(k.id, w), c = s && chore(s.chore_id); const inner = !s ? '<span class="muted">—</span>' : `${esc(c?.emoji||'❔')} ${S.reports.filter(r => r.selection_id === s.id && r.status === 'approved').length}/${c?.times_per_week ?? '?'}`; return `<td style="text-align:center"><button class="cell-btn" data-act="editSel" data-id="${k.id}" data-week="${w}">${inner}</button></td>`; }).join('')}</tr>`).join('')}
-  </table><p class="muted small" style="margin:8px 4px 0">לחיצה על משבצת — שינוי או ביטול הבחירה של אותו שבוע</p></div>`;
+    ${weeks.map(w => `<tr style="border-top:1px solid var(--line)"><td style="padding:8px 6px;white-space:nowrap">${fmtWeek(w)}</td>${ks.map(k => { const s = curSel(k.id, w), c = s && chore(s.chore_id); const inner = !s ? '<span class="muted">—</span>' : `${esc(c?.emoji||'❔')} ${S.reports.filter(r => r.selection_id === s.id && r.status === 'approved').length}/${c?.times_per_week ?? '?'} ${weekDone(k.id, w) ? '✅' : '▫️'}${s.done_override != null ? '✋' : ''}`; return `<td style="text-align:center"><button class="cell-btn" data-act="editSel" data-id="${k.id}" data-week="${w}">${inner}</button></td>`; }).join('')}</tr>`).join('')}
+  </table><p class="muted small" style="margin:8px 4px 0">לחיצה על משבצת — שינוי או ביטול הבחירה, או סימון ידני שהשבוע הושלם (✋ = סומן ידנית)</p></div>`;
 }
 
 function adminApprovals() {
@@ -1060,7 +1064,7 @@ function adminSettings() {
     </form>
     <div class="section-t">🔔 התראות אליי</div>
     <div class="card">${pushBlock()}<p class="muted small">תקבל/י התראה על כל דיווח חדש ועל כל בקשה מהחנות. הילדים מקבלים התראה כשדיווח מאושר, על בונוס, כשהחנות נפתחת, ותזכורת לפי השעה שנקבעה (רק אם המטלה עוד לא בוצעה).</p></div>
-    <p class="muted small" style="text-align:center;margin-top:18px">גרסה 5 · 1.11 (ביצועים מרובים)</p>
+    <p class="muted small" style="text-align:center;margin-top:18px">גרסה 6 · 1.11 (סימון שבוע ידני)</p>
     <div class="section-t">איך זה עובד</div>
     <div class="card small muted" style="line-height:1.7">• כל ילד בוחר מטלה אחת לשבוע (ראשון–שבת) מתוך המטלות שמשויכות אליו.<br>• כל דיווח ביצוע מגיע אליך לאישור; רק אחרי אישור הקרדיטים נכנסים ליתרה.<br>• קרדיטים נצברים לאורך החודש, ובסוף החודש החנות נפתחת להמרה. יתרה שלא נוצלה ממשיכה לחודש הבא.<br>• קנייה בחנות מורידה קרדיטים מיד; אם דוחים — הקרדיטים חוזרים.<br>• פרס משפחתי: כל הילדים תורמים לקופה משותפת (בכל זמן). כשהקופה מלאה — מקבלים התראה.<br>• משימות בונוס: חד-פעמיות; במשימה משותפת הקרדיטים מתחלקים שווה בשווה.<br>• תמונות מדיווחים נמחקות אוטומטית אחרי אישור או דחייה.<br>• במוצאי שבת (20:00) מגיע אליך סיכום שבועי בהתראה.</div>`;
 }
@@ -1122,11 +1126,19 @@ const ACT = {
     const list = choresFor(k.id);
     const taken = c => c.exclusive && S.selections.some(s => s.chore_id === c.id && s.week_start === ws && s.kid_id !== k.id);
     const m = openModal(`${k.avatar} ${k.display_name} · שבוע ${fmtWeek(ws)}`, `
-      ${cur ? `<div class="card" style="margin-bottom:12px"><div class="row"><span style="font-size:28px">${esc(cur.emoji)}</span><div><b>${esc(cur.title)}</b><div class="muted small">${appr} אושרו${pend ? ` · ${pend} ממתינים` : ''}</div></div></div></div>` : `<p class="muted" style="margin-bottom:12px">עוד לא נבחרה מטלה לשבוע הזה.</p>`}
+      ${cur ? `<div class="card" style="margin-bottom:12px"><div class="row"><span style="font-size:28px">${esc(cur.emoji)}</span><div><b>${esc(cur.title)}</b><div class="muted small">${appr} מתוך ${cur.times_per_week} אושרו${pend ? ` · ${pend} ממתינים` : ''}</div></div></div></div>
+      ${'done_override' in sel ? `<div class="section-t" style="margin-top:0">סטטוס השבוע (לרצף ולתעודה)</div>
+      <div class="seg" id="ovSeg" style="margin-bottom:6px">${[['auto', `אוטומטי (${weekDoneAuto(sel) ? 'הושלם' : 'לא הושלם'})`], ['true', '✓ הושלם'], ['false', '✕ לא הושלם']].map(([v, l]) => `<button type="button" data-v="${v}" class="${String(sel.done_override ?? 'auto') === v ? 'on' : ''}">${l}</button>`).join('')}</div>
+      <p class="muted small" style="margin-bottom:14px">לתיקון מקרים כמו דיווח כפול שנדחה. משנה רק את הרצף והתעודה — לא את הקרדיטים.</p>` : ''}` : `<p class="muted" style="margin-bottom:12px">עוד לא נבחרה מטלה לשבוע הזה.</p>`}
       <div class="section-t" style="margin-top:0">${cur ? 'החלפה למטלה אחרת' : 'בחירת מטלה'}</div>
       ${cur && appr ? `<p class="muted small" style="margin-bottom:8px">דיווחים שכבר אושרו נשארים עם הקרדיטים שלהם.</p>` : ''}
       <div class="list">${list.map(c => `<button class="item ${c.id === cur?.id ? 'mine' : ''} ${taken(c) ? 'disabled' : ''}" style="cursor:pointer;text-align:right;width:100%" data-cid="${c.id}" ${c.id === cur?.id || taken(c) ? 'disabled' : ''}><div class="em">${esc(c.emoji)}</div><div class="body"><div class="title">${esc(c.title)}</div>${taken(c) ? '<div class="sub">תפוסה השבוע ע״י ילד אחר</div>' : ''}</div><span class="credit">⭐ ${c.credits}${c.times_per_week > 1 ? '×' + c.times_per_week : ''}</span></button>`).join('')}</div>
       ${sel ? `<div class="row-end"><button class="btn soft-bad block" id="cancelSel">🗑️ ביטול הבחירה לשבוע הזה</button></div>` : ''}`);
+    m.querySelectorAll('#ovSeg [data-v]').forEach(b => b.onclick = async () => {
+      const v = b.dataset.v === 'auto' ? null : b.dataset.v === 'true';
+      const ok = await run(async () => must(await sb.from('ch_selections').update({ done_override: v }).eq('id', sel.id)), v === null ? 'חזר לחישוב אוטומטי' : v ? 'השבוע סומן כהושלם ✓' : 'השבוע סומן כלא הושלם');
+      if (ok) ACT.editSel(d);
+    });
     m.querySelectorAll('[data-cid]').forEach(b => b.onclick = async () => {
       const ok = await run(async () => must(sel
         ? await sb.from('ch_selections').update({ chore_id: b.dataset.cid }).eq('id', sel.id)
@@ -1148,7 +1160,7 @@ const ACT = {
     const me = S.me;
     const m = openModal('החשבון שלי', `<div class="row" style="margin-bottom:16px"><span class="avatar lg" style="--c:${me.color}">${esc(me.avatar)}</span><div><h3>${esc(me.display_name)}</h3><div class="muted small" dir="ltr" style="text-align:right">@${esc(me.username)}</div></div></div>
       <form id="pwF"><div class="field"><label>שינוי סיסמה</label><input class="input" name="p" type="password" minlength="6" dir="ltr" placeholder="סיסמה חדשה" required></div><button class="btn ghost block" type="submit">עדכון סיסמה</button></form>
-      <div class="row-end"><button class="btn danger block" id="lo">יציאה מהחשבון</button></div><p class="muted small" style="text-align:center;margin-top:10px">גרסה 5 · 1.11</p>`);
+      <div class="row-end"><button class="btn danger block" id="lo">יציאה מהחשבון</button></div><p class="muted small" style="text-align:center;margin-top:10px">גרסה 6 · 1.11</p>`);
     m.querySelector('#lo').onclick = logout;
     m.querySelector('#pwF').onsubmit = async ev => { ev.preventDefault(); const { error } = await sb.auth.updateUser({ password: ev.target.p.value }); if (error) return toast(errMsg(error), 'bad'); closeModal(); toast('הסיסמה עודכנה', 'ok'); };
   },
