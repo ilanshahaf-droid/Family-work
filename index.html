@@ -497,6 +497,18 @@ function confetti() {
     document.body.appendChild(s); setTimeout(() => s.remove(), 4000);
   }
 }
+/* מטלה עם כמה ביצועים: הקרדיט על השלמת כולם */
+const isMulti = c => c && c.times_per_week > 1;
+const creditLabel = c => isMulti(c) ? `⭐ ${c.credits} על השלמת כל ${c.times_per_week} הביצועים` : `⭐ ${c.credits}`;
+function multiFinal(r) {   // האם אישור הדיווח הזה משלים את השבוע
+  const c = chore(r.chore_id); if (!isMulti(c) || !r.selection_id) return true;
+  return S.reports.filter(x => x.selection_id === r.selection_id && x.status === 'approved' && x.id !== r.id).length + 1 >= c.times_per_week;
+}
+function execNo(r) {   // מספר הביצוע (לפי סדר הדיווחים)
+  const list = S.reports.filter(x => x.selection_id === r.selection_id && x.status !== 'rejected').sort((a,b) => a.created_at.localeCompare(b.created_at));
+  return list.findIndex(x => x.id === r.id) + 1;
+}
+
 function streakInfo(kid) {
   const N = Math.max(2, S.settings.streak_weeks || 4), B = S.settings.streak_bonus || 0;
   const ws = weekStart(), thisDone = weekDone(kid, ws);
@@ -635,8 +647,8 @@ function showWelcome() {
     const reps = selReps(sel), left = c.times_per_week - reps.length, waiting = reps.some(r => r.status === 'pending');
     if (left > 0) {
       big = c.emoji; head = `${c.title}: ${left > 1 ? `נשארו עוד ${left} ביצועים` : 'נשאר עוד ביצוע אחד'}`;
-      sub = `⭐ ${c.credits * left} קרדיטים מחכים לך · ${daysLeftText()}`;
-      btns = `<button class="btn big" data-act="report">✋ ביצעתי! לדיווח</button><button class="btn ghost block" style="margin-top:8px" data-act="closeModal">אעשה את זה אחר כך</button>`;
+      sub = isMulti(c) ? `סימנת ${reps.length} מתוך ${c.times_per_week} · ⭐ ${c.credits} קרדיטים בהשלמת כולם · ${daysLeftText()}` : `⭐ ${c.credits} קרדיטים מחכים לך · ${daysLeftText()}`;
+      btns = `<button class="btn big" data-act="report">${isMulti(c) ? `✋ סימון ביצוע ${reps.length + 1}` : '✋ ביצעתי! לדיווח'}</button><button class="btn ghost block" style="margin-top:8px" data-act="closeModal">אעשה את זה אחר כך</button>`;
     } else if (waiting) {
       big = '⏳'; head = 'הכל דווח!'; sub = `מחכה לאישור של ${esc(adminName())}`; btns = `<button class="btn big" data-act="closeModal">מעולה</button>`;
     } else {
@@ -805,14 +817,17 @@ function weeklyCard(kidId, interactive) {
   if (!sel || !c) {
     return `<div class="card week empty"><div class="big-emoji">🤔</div><h3>עוד לא נבחרה מטלה לשבוע</h3><p class="muted">שבוע ${fmtWeek(ws)} · בחרו מטלה מהרשימה והתחילו לצבור קרדיטים</p>${interactive ? `<div style="margin-top:14px"><button class="btn" data-act="tab" data-tab="chores">לבחירת מטלה</button></div>` : ''}</div>`;
   }
-  const reps = selReps(sel), left = c.times_per_week - reps.length;
-  const dots = Array.from({length:c.times_per_week}, (_, i) => { const r = reps[i]; return `<span class="dot ${!r ? '' : r.status === 'approved' ? 'ok' : 'wait'}">${!r ? '' : r.status === 'approved' ? '✓' : '⏳'}</span>`; }).join('');
+  const reps = selReps(sel), left = c.times_per_week - reps.length, multi = isMulti(c);
+  const okN = reps.filter(r => r.status === 'approved').length;
+  const dots = Array.from({length:c.times_per_week}, (_, i) => { const r = reps[i]; return `<span class="dot ${!r ? '' : r.status === 'approved' ? 'ok' : 'wait'}">${!r ? (multi ? i + 1 : '') : r.status === 'approved' ? '✓' : '⏳'}</span>`; }).join('');
   return `<div class="card week">
-    <div class="week-top"><span class="chip">המטלה השבועית · ${fmtWeek(ws)}${c.photo_required ? ' · 📷' : ''}</span><span class="credit">⭐ ${c.credits}${c.times_per_week > 1 ? ' לכל ביצוע' : ''}</span></div>
+    <div class="week-top"><span class="chip">המטלה השבועית · ${fmtWeek(ws)}${c.photo_required ? ' · 📷' : ''}</span><span class="credit">⭐ ${c.credits}${multi ? ' לשבוע' : ''}</span></div>
     <div class="week-main"><div class="big-emoji">${esc(c.emoji)}</div><div><h3>${esc(c.title)}</h3>${c.description ? `<p class="muted small">${esc(c.description)}</p>` : ''}</div></div>
+    ${multi ? `<div class="row-between" style="margin-top:14px"><b>${reps.length} מתוך ${c.times_per_week} ביצועים סומנו</b><span class="muted small">${okN} אושרו</span></div><div class="bar"><span style="width:${Math.round(reps.length / c.times_per_week * 100)}%"></span></div>
+      <p class="muted small" style="margin-top:6px">⭐ ${c.credits} קרדיטים נכנסים כשכל ${c.times_per_week} הביצועים מאושרים</p>` : ''}
     <div class="dots">${dots}</div>
     ${interactive ? `<div class="week-foot">${left > 0
-      ? `<button class="btn big" data-act="report">✋ ביצעתי! שליחה לאישור</button><span class="muted small">${left === 1 ? 'נשאר עוד דיווח אחד' : `נשארו ${left} דיווחים`} השבוע · ${daysLeftText()}</span>`
+      ? `<button class="btn big" data-act="report">${multi ? `✋ סימון ביצוע ${reps.length + 1} מתוך ${c.times_per_week}` : '✋ ביצעתי! שליחה לאישור'}</button><span class="muted small">${multi ? (left === 1 ? 'נשאר רק עוד ביצוע אחד!' : `נשארו עוד ${left} ביצועים`) : 'נשאר עוד דיווח אחד השבוע'} · ${daysLeftText()}</span>`
       : `<div class="done-msg" style="width:100%">🎉 השלמת את כל הביצועים לשבוע הזה!</div>`}</div>` : ''}
   </div>`;
 }
@@ -894,7 +909,7 @@ function kidChores() {
       else btn = `<button class="btn sm" data-act="pick" data-id="${c.id}">${sel ? 'החלפה' : 'בחירה'}</button>`;
       return `<div class="item ${mine?'mine':''} ${taken&&!mine?'disabled':''}"><div class="em">${esc(c.emoji)}</div><div class="body">
         <div class="title">${esc(c.title)}</div>${c.description ? `<div class="sub">${esc(c.description)}</div>` : ''}
-        <div class="chips"><span class="chip gold">⭐ ${c.credits}${c.times_per_week>1?' × '+c.times_per_week:''}</span>${c.times_per_week>1?`<span class="chip gray">עד ${c.times_per_week} פעמים בשבוע</span>`:''}${c.exclusive?'<span class="chip gray">🔒 לילד אחד</span>':''}${c.photo_required?'<span class="chip gray">📷 עם תמונה</span>':''}${others.length?`<span class="chip">${taken?'נבחרה ע״י':'גם'} ${others.map(o=>esc(o.display_name)).join(', ')}</span>`:''}</div>
+        <div class="chips"><span class="chip gold">${creditLabel(c)}</span>${c.exclusive?'<span class="chip gray">🔒 לילד אחד</span>':''}${c.photo_required?'<span class="chip gray">📷 עם תמונה</span>':''}${others.length?`<span class="chip">${taken?'נבחרה ע״י':'גם'} ${others.map(o=>esc(o.display_name)).join(', ')}</span>`:''}</div>
       </div><div class="side">${btn}</div></div>`; }).join('')}</div>` : empty('📭', 'עדיין אין מטלות זמינות')}`;
 }
 
@@ -982,7 +997,8 @@ function adminApprovals() {
       ${r.note ? `<div class="note">💬 ${esc(r.note)}</div>` : ''}
       ${r.photo_path ? `<img class="appr-photo" data-photo="${esc(r.photo_path)}" data-act="viewPhoto" alt="תמונה מהדיווח">` : ''}
       <div class="praise"><input class="input" id="pr-${r.id}" maxlength="140" placeholder="💬 חיזוק מילולי (לא חובה) — מגיע לילד עם האישור"><div class="praise-chips">${PRAISES.map(p => `<button type="button" class="chip-btn" data-act="praise" data-id="${r.id}" data-p="${esc(p)}">${p}</button>`).join('')}</div></div>
-      <div class="acts"><span class="small muted">${isTask ? 'סה״כ קרדיטים:' : 'קרדיטים:'}</span><input class="mini" type="number" id="cr-${r.id}" value="${r.credits}"><span style="flex:1"></span><button class="btn sm soft-bad" data-act="rejectRep" data-id="${r.id}">✕ דחייה</button><button class="btn sm ok" data-act="approveRep" data-id="${r.id}">✓ אישור</button></div></div>`; }).join('')}</div>` : `<div class="card">${empty('✅', 'אין דיווחים שמחכים לאישור')}</div>`}
+      ${(() => { const c = !isTask && chore(r.chore_id); if (!isMulti(c)) return ''; const fin = multiFinal(r); return `<div class="note">🔢 ביצוע ${execNo(r)} מתוך ${c.times_per_week}${fin ? ` · <b>אישור זה משלים את השבוע — ⭐ ${c.credits}</b>` : ` · הקרדיטים (⭐ ${c.credits}) יינתנו עם אישור הביצוע האחרון`}</div>`; })()}
+      <div class="acts">${!isTask && !multiFinal(r) ? '' : `<span class="small muted">${isTask ? 'סה״כ קרדיטים:' : isMulti(chore(r.chore_id)) ? 'קרדיטים על השבוע:' : 'קרדיטים:'}</span><input class="mini" type="number" id="cr-${r.id}" value="${isTask ? r.credits : (chore(r.chore_id)?.credits ?? r.credits)}">`}<span style="flex:1"></span><button class="btn sm soft-bad" data-act="rejectRep" data-id="${r.id}">✕ דחייה</button><button class="btn sm ok" data-act="approveRep" data-id="${r.id}">✓ אישור</button></div></div>`; }).join('')}</div>` : `<div class="card">${empty('✅', 'אין דיווחים שמחכים לאישור')}</div>`}
     <div class="section-t">בקשות מהחנות (${reds.length})</div>
     ${reds.length ? `<div class="list">${reds.map(r => `<div class="appr"><div class="top">${kidTag(r.kid_id)}<div style="flex:1"><div style="font-weight:700">${esc(prof(r.kid_id)?.display_name)} · ${esc(r.emoji||'🎁')} ${esc(r.title)}</div><div class="muted small">${fmtDate(r.created_at)} · <span class="credit">⭐ ${r.cost}</span></div></div></div>
       <div class="acts"><span style="flex:1"></span><button class="btn sm soft-bad" data-act="rejectRed" data-id="${r.id}">✕ דחייה והחזרת קרדיטים</button><button class="btn sm ok" data-act="approveRed" data-id="${r.id}">🎁 נמסר</button></div></div>`).join('')}</div>` : `<div class="card">${empty('🛍️', 'אין בקשות פתוחות')}</div>`}
@@ -1008,7 +1024,7 @@ function adminChores() {
       const who = c.assigned_to && c.assigned_to.length ? c.assigned_to.map(id => prof(id)?.display_name).filter(Boolean).join(', ') : 'כל הילדים';
       const takers = S.selections.filter(s => s.chore_id === c.id && s.week_start === weekStart()).map(s => prof(s.kid_id)?.avatar).join(' ');
       return `<div class="item ${c.active?'':'disabled'}"><div class="em">${esc(c.emoji)}</div><div class="body"><div class="title">${esc(c.title)}</div>
-        <div class="chips"><span class="chip gold">⭐ ${c.credits}</span><span class="chip gray">${c.times_per_week}× בשבוע</span>${c.exclusive?'<span class="chip gray">🔒 לילד אחד</span>':''}<span class="chip gray">👥 ${esc(who)}</span>${c.photo_required?'<span class="chip gray">📷 תמונה</span>':''}${!c.active?'<span class="chip bad">מושבתת</span>':''}${takers?`<span class="chip">השבוע: ${takers}</span>`:''}</div></div>
+        <div class="chips"><span class="chip gold">⭐ ${c.credits}${isMulti(c) ? ' לשבוע' : ''}</span><span class="chip gray">${c.times_per_week}× בשבוע</span>${c.exclusive?'<span class="chip gray">🔒 לילד אחד</span>':''}<span class="chip gray">👥 ${esc(who)}</span>${c.photo_required?'<span class="chip gray">📷 תמונה</span>':''}${!c.active?'<span class="chip bad">מושבתת</span>':''}${takers?`<span class="chip">השבוע: ${takers}</span>`:''}</div></div>
         <div class="side"><button class="btn sm ghost" data-act="editChore" data-id="${c.id}">עריכה</button></div></div>`; }).join('')}</div>` : `<div class="card">${empty('📋', 'עוד אין מטלות')}</div>`}`;
 }
 
@@ -1044,7 +1060,7 @@ function adminSettings() {
     </form>
     <div class="section-t">🔔 התראות אליי</div>
     <div class="card">${pushBlock()}<p class="muted small">תקבל/י התראה על כל דיווח חדש ועל כל בקשה מהחנות. הילדים מקבלים התראה כשדיווח מאושר, על בונוס, כשהחנות נפתחת, ותזכורת לפי השעה שנקבעה (רק אם המטלה עוד לא בוצעה).</p></div>
-    <p class="muted small" style="text-align:center;margin-top:18px">גרסה 4 · 30.10 (תיקון משתתפים)</p>
+    <p class="muted small" style="text-align:center;margin-top:18px">גרסה 5 · 1.11 (ביצועים מרובים)</p>
     <div class="section-t">איך זה עובד</div>
     <div class="card small muted" style="line-height:1.7">• כל ילד בוחר מטלה אחת לשבוע (ראשון–שבת) מתוך המטלות שמשויכות אליו.<br>• כל דיווח ביצוע מגיע אליך לאישור; רק אחרי אישור הקרדיטים נכנסים ליתרה.<br>• קרדיטים נצברים לאורך החודש, ובסוף החודש החנות נפתחת להמרה. יתרה שלא נוצלה ממשיכה לחודש הבא.<br>• קנייה בחנות מורידה קרדיטים מיד; אם דוחים — הקרדיטים חוזרים.<br>• פרס משפחתי: כל הילדים תורמים לקופה משותפת (בכל זמן). כשהקופה מלאה — מקבלים התראה.<br>• משימות בונוס: חד-פעמיות; במשימה משותפת הקרדיטים מתחלקים שווה בשווה.<br>• תמונות מדיווחים נמחקות אוטומטית אחרי אישור או דחייה.<br>• במוצאי שבת (20:00) מגיע אליך סיכום שבועי בהתראה.</div>`;
 }
@@ -1132,7 +1148,7 @@ const ACT = {
     const me = S.me;
     const m = openModal('החשבון שלי', `<div class="row" style="margin-bottom:16px"><span class="avatar lg" style="--c:${me.color}">${esc(me.avatar)}</span><div><h3>${esc(me.display_name)}</h3><div class="muted small" dir="ltr" style="text-align:right">@${esc(me.username)}</div></div></div>
       <form id="pwF"><div class="field"><label>שינוי סיסמה</label><input class="input" name="p" type="password" minlength="6" dir="ltr" placeholder="סיסמה חדשה" required></div><button class="btn ghost block" type="submit">עדכון סיסמה</button></form>
-      <div class="row-end"><button class="btn danger block" id="lo">יציאה מהחשבון</button></div><p class="muted small" style="text-align:center;margin-top:10px">גרסה 4 · 30.10</p>`);
+      <div class="row-end"><button class="btn danger block" id="lo">יציאה מהחשבון</button></div><p class="muted small" style="text-align:center;margin-top:10px">גרסה 5 · 1.11</p>`);
     m.querySelector('#lo').onclick = logout;
     m.querySelector('#pwF').onsubmit = async ev => { ev.preventDefault(); const { error } = await sb.auth.updateUser({ password: ev.target.p.value }); if (error) return toast(errMsg(error), 'bad'); closeModal(); toast('הסיסמה עודכנה', 'ok'); };
   },
@@ -1149,10 +1165,13 @@ const ACT = {
   },
   report() {
     const sel = curSel(S.me.id), c = sel && chore(sel.chore_id); if (!c) return;
-    const m = openModal('דיווח ביצוע', `<div class="row" style="margin-bottom:14px"><div class="big-emoji">${esc(c.emoji)}</div><div><h3>${esc(c.title)}</h3><span class="credit">⭐ ${c.credits}</span> <span class="muted small">אחרי אישור</span></div></div>
+    const k = selReps(sel).length + 1, multi = isMulti(c);
+    const m = openModal(multi ? `סימון ביצוע ${k} מתוך ${c.times_per_week}` : 'דיווח ביצוע', `<div class="row" style="margin-bottom:14px"><div class="big-emoji">${esc(c.emoji)}</div><div><h3>${esc(c.title)}</h3>${multi
+        ? `<span class="muted small">${k === c.times_per_week ? `זה הביצוע האחרון! אחרי אישור כל הביצועים נכנסים <b class="credit">⭐ ${c.credits}</b>` : `עוד ${c.times_per_week - k} ${c.times_per_week - k === 1 ? 'ביצוע' : 'ביצועים'} אחרי זה · ⭐ ${c.credits} בהשלמת כולם`}</span>`
+        : `<span class="credit">⭐ ${c.credits}</span> <span class="muted small">אחרי אישור</span>`}</div></div>
       <form id="repF"><div class="field"><label>רוצה לספר מה עשית? (לא חובה)</label><textarea class="input" name="note" maxlength="300" lang="he" dir="auto" autocapitalize="sentences" spellcheck="true" placeholder="למשל: פיניתי את המדיח וסידרתי גם את הסירים"></textarea></div>${photoField(c.photo_required)}<button class="btn big" type="submit">📨 שליחה לאישור</button></form>`);
     wirePhoto(m);
-    m.querySelector('#repF').onsubmit = ev => { ev.preventDefault(); submitReport(m, {}, c.photo_required, 'נשלח לאישור! 🙌'); };
+    m.querySelector('#repF').onsubmit = ev => { ev.preventDefault(); submitReport(m, {}, c.photo_required, multi ? (k === c.times_per_week ? `סימנת את כל ${c.times_per_week} הביצועים! 🎉` : `ביצוע ${k} מתוך ${c.times_per_week} סומן 💪`) : 'נשלח לאישור! 🙌'); };
   },
   reportTask(d) {
     const t = S.tasks.find(x => x.id === d.id); if (!t) return;
@@ -1195,7 +1214,7 @@ const ACT = {
   praise(d) { const i = document.getElementById('pr-' + d.id); if (i) i.value = d.p; },
   async sugOk(d) {
     const c = chore(d.id);
-    if (!(await confirmBox('ייקור מטלה', `${esc(c.emoji)} ${esc(c.title)}: ${c.credits} → <b>${d.v}</b> קרדיטים לכל ביצוע?`, 'ייקור', 'ok'))) return;
+    if (!(await confirmBox('ייקור מטלה', `${esc(c.emoji)} ${esc(c.title)}: ${c.credits} → <b>${d.v}</b> קרדיטים${isMulti(c) ? ' לשבוע' : ''}?`, 'ייקור', 'ok'))) return;
     await run(async () => must(await sb.from('ch_chores').update({ credits: +d.v, price_review_after: addDays(ilDate(), 21) }).eq('id', d.id)), 'המחיר עודכן ⭐');
   },
   async sugLater(d) { await run(async () => must(await sb.from('ch_chores').update({ price_review_after: addDays(ilDate(), 21) }).eq('id', d.id)), 'נזכיר שוב בעוד 3 שבועות'); },
@@ -1305,7 +1324,7 @@ const ACT = {
       <div class="field"><label>שם המטלה</label><input class="input" name="title" value="${esc(c.title)}" required maxlength="60"></div>
       <div class="field"><label>אייקון</label>${emojiPicker('emoji', c.emoji, CHORE_EMOJIS)}</div>
       <div class="field"><label>תיאור (לא חובה)</label><input class="input" name="description" value="${esc(c.description||'')}" maxlength="140"></div>
-      <div class="grid two"><div class="field"><label>קרדיטים לכל ביצוע</label><input class="input" type="number" min="0" name="credits" value="${c.credits}" required></div>
+      <div class="grid two"><div class="field"><label>קרדיטים</label><span class="hint">במטלה עם כמה ביצועים — על השלמת כולם בשבוע</span><input class="input" type="number" min="0" name="credits" value="${c.credits}" required></div>
       <div class="field"><label>כמה פעמים בשבוע</label><input class="input" type="number" min="1" max="14" name="times_per_week" value="${c.times_per_week}" required></div></div>
       <label class="check"><input type="checkbox" name="exclusive" ${c.exclusive?'checked':''}> רק ילד אחד יכול לבחור אותה בכל שבוע</label>
       <label class="check"><input type="checkbox" name="photo_required" ${c.photo_required?'checked':''}> 📷 חובה לצרף תמונה לכל דיווח</label>
@@ -1404,7 +1423,8 @@ async function approveOne(r) {
   if (!r) return;
   const v = parseInt($('#cr-' + r.id)?.value, 10), note = ($('#pr-' + r.id)?.value || '').trim() || null;
   if (r.kind === 'task') return must(await sb.rpc('ch_review_task', { p_report: r.id, p_approve: true, p_note: note, p_total: isNaN(v) ? r.credits : v }));
-  must(await sb.from('ch_reports').update({ status:'approved', credits: isNaN(v) ? r.credits : v, admin_note: note, reviewed_at: new Date().toISOString() }).eq('id', r.id));
+  const credits = !multiFinal(r) ? 0 : isNaN(v) ? (chore(r.chore_id)?.credits ?? r.credits) : v;
+  must(await sb.from('ch_reports').update({ status:'approved', credits, admin_note: note, reviewed_at: new Date().toISOString() }).eq('id', r.id));
 }
 function reasonModal(title, placeholder, fn, okMsg) {
   const m = openModal(title, `<form id="rsF"><div class="field"><label>הסבר לילד (לא חובה)</label><input class="input" name="n" maxlength="140" placeholder="${esc(placeholder)}"></div><button class="btn danger big" type="submit">דחייה</button></form>`);
