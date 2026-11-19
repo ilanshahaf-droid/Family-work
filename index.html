@@ -237,6 +237,12 @@ textarea.input{min-height:80px;resize:vertical}
 .confetti{position:fixed;top:-40px;z-index:70;font-size:26px;pointer-events:none;animation:fall linear forwards}
 @keyframes fall{to{transform:translateY(110vh) rotate(540deg);opacity:.2}}
 
+/* google */
+.google-btn{background:#fff;color:var(--ink);border:1.5px solid var(--line);font-weight:600}
+.google-btn:hover{background:#f8f8fb}
+.or-line{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:.85rem;margin:14px 0}
+.or-line:before,.or-line:after{content:"";flex:1;height:1px;background:var(--line)}
+
 /* update 3 */
 .family{border:2px solid #fde3a7;background:linear-gradient(180deg,#fffaf0,#fff)}
 .family .head{display:flex;gap:12px;align-items:center}
@@ -423,7 +429,7 @@ document.addEventListener('visibilitychange', async () => {
 /* ניווט מקישור / מהתראה (#approvals, #store ...) */
 function goHash(h) {
   h = (h || '').replace(/^.*#/, '');
-  if (!S.me || !h) return;
+  if (!S.me || !h || h.includes('=')) return;
   const views = S.me.role === 'admin' ? ADMIN_VIEWS : KID_VIEWS;
   if (h === 'certificate' && S.me.role === 'kid') { closeModal(); ACT.cert({ id: S.me.id, month: monthKey() }); }
   else if (views[h]) { S.tab = h; closeModal(); render(); }
@@ -678,11 +684,33 @@ async function boot() {
     $('#app').innerHTML = `<div class="auth"><div class="card"><div class="logo">🏠</div><h1>כמעט מוכן</h1><p class="sub">צריך להזין בקובץ index.html את כתובת ה-Supabase ואת ה-anon key (בראש הסקריפט, באובייקט CONFIG).</p></div></div>`;
     return;
   }
-  sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {auth:{storageKey:'matalot-auth'}});
+  // שגיאה שחזרה מגוגל (למשל כשהחיבור נכשל)
+  const qs = new URLSearchParams(location.search + '&' + location.hash.replace(/^#/, ''));
+  const oauthErr = qs.get('error_description') || qs.get('error');
+  sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {auth:{storageKey:'matalot-auth', flowType:'implicit', detectSessionInUrl:true}});
   const { data:{ session } } = await sb.auth.getSession();
+  if (oauthErr || /access_token|error/.test(location.hash) || qs.has('code')) { try { history.replaceState(null, '', location.pathname); } catch (_) {} }
+  if (oauthErr) { const wasLinking = lsGet('matalot-linking'); lsSet('matalot-linking', ''); if (session && wasLinking) { await enter(); return toast(googleErr(oauthErr), 'bad'); } return showAuth(googleErr(oauthErr)); }
   if (session) return enter();
   showAuth();
 }
+
+/* ---------------- Google ---------------- */
+const APP_URL = () => location.origin + location.pathname;
+function googleErr(m) {
+  m = decodeURIComponent(String(m || '')).replace(/\+/g, ' ');
+  if (/manual linking/i.test(m)) return 'החיבור לגוגל עוד לא הופעל ב-Supabase (צריך להדליק "Allow manual linking").';
+  if (/already linked|already been linked|identity.*exists/i.test(m)) return 'חשבון הגוגל הזה כבר מחובר למשתמש אחר. צריך למחוק אותו ב-Supabase (Authentication → Users) ולנסות שוב.';
+  if (/provider is not enabled|Unsupported provider/i.test(m)) return 'הכניסה עם Google עוד לא הופעלה ב-Supabase.';
+  if (/redirect/i.test(m)) return 'כתובת האפליקציה לא מאושרת ב-Supabase (URL Configuration → Redirect URLs).';
+  return 'הכניסה עם Google נכשלה: ' + m;
+}
+async function googleSignIn() {
+  const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: APP_URL(), queryParams: { prompt: 'select_account' } } });
+  if (error) toast(googleErr(error.message), 'bad');
+}
+const hasGoogle = () => (S.identities || []).some(i => i.provider === 'google');
+const googleEmail = () => (S.identities || []).find(i => i.provider === 'google')?.identity_data?.email || '';
 
 async function showAuth(error) {
   const { data:hasAdmin, error:e } = await sb.rpc('ch_has_admin');
@@ -699,7 +727,11 @@ function renderLogin(error) {
     ${error ? `<div class="err">${esc(error)}</div>` : ''}
     <div class="field"><label>שם משתמש</label><input class="input" name="u" autocomplete="username" autocapitalize="none" dir="ltr" required></div>
     <div class="field"><label>סיסמה</label><input class="input" name="p" type="password" autocomplete="current-password" dir="ltr" required></div>
-    <button class="btn big" type="submit">כניסה</button></form></div>`;
+    <button class="btn big" type="submit">כניסה</button>
+    <div class="or-line"><span>או</span></div>
+    <button type="button" class="btn big google-btn" id="gBtn"><svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2c-2 1.5-4.5 2.4-7.2 2.4-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg> כניסה עם Google</button>
+    <p class="muted small" style="text-align:center;margin-top:8px">לחשבון שחובר לגוגל בהגדרות</p></form></div>`;
+  $('#gBtn').onclick = googleSignIn;
   $('#loginF').onsubmit = async ev => {
     ev.preventDefault(); const f = ev.target; const b = f.querySelector('button'); b.disabled = true;
     const { error } = await sb.auth.signInWithPassword({ email: toEmail(f.u.value), password: f.p.value });
@@ -733,12 +765,20 @@ function renderSetup(error) {
 async function enter() {
   const { data:{ user } } = await sb.auth.getUser();
   if (!user) return showAuth();
+  S.identities = user.identities || [];
   const { data:p } = await sb.from('ch_profiles').select('*').eq('id', user.id).maybeSingle();
+  if (!p && S.identities.some(i => i.provider === 'google')) {
+    // נכנסו עם גוגל שעוד לא חובר — מנקים את המשתמש הריק שנוצר ומסבירים מה לעשות
+    try { await sb.rpc('ch_cleanup_orphan_google'); } catch (_) {}
+    await sb.auth.signOut();
+    return renderLogin('חשבון הגוגל הזה עוד לא מחובר לאפליקציה. היכנסו קודם עם שם משתמש וסיסמה, ובלשונית ההגדרות לחצו "חיבור חשבון Google".');
+  }
   if (!p || !p.active) {
     $('#app').innerHTML = `<div class="auth"><div class="card"><div class="logo">🔒</div><h1>אין גישה</h1><p class="sub">${p ? 'החשבון הושבת ע״י המנהל.' : 'החשבון הזה לא רשום באפליקציה.'}</p><button class="btn block" onclick="logout()">יציאה</button></div></div>`;
     return;
   }
   S.me = p; S.tab = p.role === 'admin' ? 'overview' : 'home';
+  if (lsGet('matalot-linking')) { lsSet('matalot-linking', ''); if (S.identities.some(i => i.provider === 'google')) { S.tab = 'settings'; setTimeout(() => toast('חשבון Google חובר ✓ מעכשיו אפשר להיכנס בלחיצה', 'ok'), 400); } }
   await refresh(); subscribeLive();
   await checkPush();
   if (S.push === 'on') { const sub = await currentSub(); if (sub) { const j = sub.toJSON(); sb.rpc('ch_save_push', { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth }).then(() => {}); } }
@@ -1062,9 +1102,13 @@ function adminSettings() {
       <div class="field"><label>🔥 בונוס רצף</label><div class="row" style="flex-wrap:wrap">כל <input class="input" type="number" min="2" max="12" name="streak_weeks" value="${s.streak_weeks ?? 4}" style="width:80px"> שבועות רצופים של מטלה שהושלמה = <input class="input" type="number" min="0" max="500" name="streak_bonus" value="${s.streak_bonus ?? 10}" style="width:90px"> קרדיטים</div><span class="hint">0 קרדיטים = בלי בונוס רצף. הבונוס נוסף אוטומטית ברגע שמאשרים את הביצוע שסוגר את הרצף.</span></div>
       <button class="btn" type="submit">שמירה</button>
     </form>
+    <div class="section-t">🔐 כניסה עם Google</div>
+    <div class="card">${hasGoogle()
+      ? `<div class="status-line on">✓ מחובר לחשבון Google${googleEmail() ? ` · <span dir="ltr">${esc(googleEmail())}</span>` : ''}</div><p class="muted small">אפשר להיכנס בלחיצה על "כניסה עם Google" במסך הכניסה. שם המשתמש והסיסמה ממשיכים לעבוד.</p><div class="row-end" style="margin-top:8px"><button class="btn sm soft-bad" data-act="unlinkGoogle">ניתוק מגוגל</button></div>`
+      : `<p class="muted small" style="margin-bottom:10px">חיבור חד-פעמי: אחריו תוכל/י להיכנס עם חשבון הגוגל שלך בלי שם משתמש וסיסמה.</p><button class="btn block google-btn" data-act="linkGoogle">חיבור חשבון Google</button>`}</div>
     <div class="section-t">🔔 התראות אליי</div>
     <div class="card">${pushBlock()}<p class="muted small">תקבל/י התראה על כל דיווח חדש ועל כל בקשה מהחנות. הילדים מקבלים התראה כשדיווח מאושר, על בונוס, כשהחנות נפתחת, ותזכורת לפי השעה שנקבעה (רק אם המטלה עוד לא בוצעה).</p></div>
-    <p class="muted small" style="text-align:center;margin-top:18px">גרסה 6 · 1.11 (סימון שבוע ידני)</p>
+    <p class="muted small" style="text-align:center;margin-top:18px">גרסה 7 · 19.11 (כניסה עם Google)</p>
     <div class="section-t">איך זה עובד</div>
     <div class="card small muted" style="line-height:1.7">• כל ילד בוחר מטלה אחת לשבוע (ראשון–שבת) מתוך המטלות שמשויכות אליו.<br>• כל דיווח ביצוע מגיע אליך לאישור; רק אחרי אישור הקרדיטים נכנסים ליתרה.<br>• קרדיטים נצברים לאורך החודש, ובסוף החודש החנות נפתחת להמרה. יתרה שלא נוצלה ממשיכה לחודש הבא.<br>• קנייה בחנות מורידה קרדיטים מיד; אם דוחים — הקרדיטים חוזרים.<br>• פרס משפחתי: כל הילדים תורמים לקופה משותפת (בכל זמן). כשהקופה מלאה — מקבלים התראה.<br>• משימות בונוס: חד-פעמיות; במשימה משותפת הקרדיטים מתחלקים שווה בשווה.<br>• תמונות מדיווחים נמחקות אוטומטית אחרי אישור או דחייה.<br>• במוצאי שבת (20:00) מגיע אליך סיכום שבועי בהתראה.</div>`;
 }
@@ -1075,6 +1119,19 @@ const ADMIN_VIEWS = { overview:adminOverview, approvals:adminApprovals, chores:a
    פעולות
    ===================================================================== */
 const ACT = {
+  async linkGoogle() {
+    lsSet('matalot-linking', '1');
+    const { error } = await sb.auth.linkIdentity({ provider: 'google', options: { redirectTo: APP_URL(), queryParams: { prompt: 'select_account' } } });
+    if (error) { lsSet('matalot-linking', ''); toast(googleErr(error.message), 'bad'); }
+  },
+  async unlinkGoogle() {
+    const idt = (S.identities || []).find(i => i.provider === 'google'); if (!idt) return;
+    if (!(await confirmBox('ניתוק מגוגל', 'לנתק את חשבון הגוגל? הכניסה תהיה רק עם שם משתמש וסיסמה.', 'ניתוק', 'danger'))) return;
+    const { error } = await sb.auth.unlinkIdentity(idt);
+    if (error) return toast(errMsg(error), 'bad');
+    const { data:{ user } } = await sb.auth.getUser(); S.identities = user?.identities || [];
+    render(); toast('החשבון נותק מגוגל');
+  },
   bg: (d, el, e) => { if (e.target === el) closeModal(); },
   closeModal,
   refresh: () => refresh().then(() => toast('עודכן')),
@@ -1160,7 +1217,7 @@ const ACT = {
     const me = S.me;
     const m = openModal('החשבון שלי', `<div class="row" style="margin-bottom:16px"><span class="avatar lg" style="--c:${me.color}">${esc(me.avatar)}</span><div><h3>${esc(me.display_name)}</h3><div class="muted small" dir="ltr" style="text-align:right">@${esc(me.username)}</div></div></div>
       <form id="pwF"><div class="field"><label>שינוי סיסמה</label><input class="input" name="p" type="password" minlength="6" dir="ltr" placeholder="סיסמה חדשה" required></div><button class="btn ghost block" type="submit">עדכון סיסמה</button></form>
-      <div class="row-end"><button class="btn danger block" id="lo">יציאה מהחשבון</button></div><p class="muted small" style="text-align:center;margin-top:10px">גרסה 6 · 1.11</p>`);
+      <div class="row-end"><button class="btn danger block" id="lo">יציאה מהחשבון</button></div><p class="muted small" style="text-align:center;margin-top:10px">גרסה 7 · 19.11</p>`);
     m.querySelector('#lo').onclick = logout;
     m.querySelector('#pwF').onsubmit = async ev => { ev.preventDefault(); const { error } = await sb.auth.updateUser({ password: ev.target.p.value }); if (error) return toast(errMsg(error), 'bad'); closeModal(); toast('הסיסמה עודכנה', 'ok'); };
   },
